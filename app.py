@@ -397,38 +397,39 @@ def display_news_cards(news_items, max_items=12):
         return
 
     for item in news_items[:max_items]:
-        content = item.get("content", {})
+        content = item.get("content", {}) if isinstance(item, dict) else {}
 
-        title = (
-            content.get("title")
-            or item.get("title")
-            or "No title"
-        )
+        title = content.get("title") or item.get("title") or item.get("headline") or "No title"
 
-        publisher = (
-            content.get("provider", {}).get("displayName")
-            or item.get("publisher")
-            or "Unknown source"
-        )
+        provider = content.get("provider", {})
+        if not isinstance(provider, dict):
+            provider = {}
 
-        link = (
-            content.get("canonicalUrl", {}).get("url")
-            or item.get("link")
-            or "#"
-        )
+        publisher = provider.get("displayName") or item.get("publisher") or "Unknown source"
 
-        pubdate = content.get("pubDate", "")
-        summary = content.get("summary", "")
+        canonical = content.get("canonicalUrl", {})
+        if not isinstance(canonical, dict):
+            canonical = {}
+
+        link = canonical.get("url") or item.get("link") or "#"
+
+        pubdate = content.get("pubDate") or item.get("pubDate") or ""
+        summary = content.get("summary") or item.get("summary") or ""
 
         related_tickers = []
-        finance_items = content.get("finance", {}).get("result", [])
-        for r in finance_items:
-            symbol = r.get("symbol")
-            if symbol:
-                related_tickers.append(symbol)
+        finance = content.get("finance", {})
+        if isinstance(finance, dict):
+            finance_items = finance.get("result", [])
+            if isinstance(finance_items, list):
+                for r in finance_items:
+                    if isinstance(r, dict):
+                        symbol = r.get("symbol")
+                        if symbol:
+                            related_tickers.append(symbol)
 
-        card_color = "#ffe6e6" if is_geopolitical(title) else "#f7f7f7"
-        border_color = "red" if is_geopolitical(title) else "#999"
+        important = is_geopolitical(title)
+        card_color = "#ffe6e6" if important else "#f7f7f7"
+        border_color = "red" if important else "#999"
 
         st.markdown(
             f"""
@@ -436,7 +437,8 @@ def display_news_cards(news_items, max_items=12):
                 <b>{title}</b><br>
                 <span style='font-size:13px;'><i>{publisher}</i></span><br>
                 <span style='font-size:12px;'>{pubdate}</span><br>
-                <span style='font-size:12px;'>Related tickers: {related_tickers}</span><br><br>
+                <span style='font-size:12px;'>Related tickers: {related_tickers}</span><br>
+                <span style='font-size:13px;'>{summary}</span><br><br>
                 <a href='{link}' target='_blank'>Open article</a>
             </div>
             """,

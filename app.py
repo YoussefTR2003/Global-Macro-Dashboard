@@ -395,8 +395,11 @@ with col_com:
 import requests
 
 def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
+    api_key = st.secrets.get("GNEWS_API_KEY", None)
 
-    api_key = st.secrets["GNEWS_API_KEY"]
+    if api_key is None:
+        st.error("GNEWS_API_KEY not found in Streamlit secrets.")
+        return []
 
     url = "https://gnews.io/api/v4/search"
 
@@ -408,32 +411,12 @@ def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
     }
 
     try:
-        r = requests.get(url, params=params)
+        r = requests.get(url, params=params, timeout=10)
         data = r.json()
         return data.get("articles", [])
-    except Exception:
+    except Exception as e:
+        st.error(f"GNews request failed: {e}")
         return []
-
-
-def display_gnews_titles(articles):
-
-    if not articles:
-        st.warning("No news retrieved.")
-        return
-
-    for article in articles:
-
-        title = article.get("title", "No title")
-        url = article.get("url", "#")
-        source = article.get("source", {}).get("name", "Unknown source")
-        date = article.get("publishedAt", "")
-
-        if is_geopolitical(title):
-            st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
-        else:
-            st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
-
-
 # =========================================================
 # IMPORTANT NEWS
 # =========================================================

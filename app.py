@@ -146,70 +146,25 @@ def display_market_metrics(df, n_cols=4):
         )
 
 
-def display_news_cards(news_items, max_items=12):
-    if not news_items:
-        st.warning("No news retrieved.")
-        return
 
-    for item in news_items[:max_items]:
-        title = item.get("title", "No title")
-        publisher = item.get("publisher", "Unknown source")
-        link = item.get("link", "")
-        related = item.get("relatedTickers", [])
+from newsapi import NewsApiClient
 
-        if is_geopolitical(title):
-            st.markdown(
-                f"""
-                <div style='padding:12px; border-left:6px solid red; background-color:#ffe6e6; margin-bottom:12px; border-radius:6px;'>
-                    <b>{title}</b><br>
-                    <span style='font-size: 13px;'><i>{publisher}</i></span><br>
-                    <span style='font-size: 13px;'>Related tickers: {related}</span><br>
-                    <a href='{link}' target='_blank'>Open article</a>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                f"""
-                <div style='padding:12px; border-left:6px solid #999; background-color:#f7f7f7; margin-bottom:12px; border-radius:6px;'>
-                    <b>{title}</b><br>
-                    <span style='font-size: 13px;'><i>{publisher}</i></span><br>
-                    <span style='font-size: 13px;'>Related tickers: {related}</span><br>
-                    <a href='{link}' target='_blank'>Open article</a>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+newsapi = NewsApiClient(api_key=st.secrets.get("NEWSAPI_KEY"))
 
-import requests
-
-def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
-    api_key = st.secrets.get("GNEWS_API_KEY", None)
-
-    if api_key is None:
-        st.error("GNEWS_API_KEY not found in Streamlit secrets.")
-        return []
-
-    url = "https://gnews.io/api/v4/search"
-
-    params = {
-        "q": query,
-        "lang": "en",
-        "max": max_items,
-        "apikey": api_key
-    }
-
+def get_market_news(max_items=10):
     try:
-        r = requests.get(url, params=params, timeout=10)
-        data = r.json()
-        return data.get("articles", [])
+        response = newsapi.get_top_headlines(
+            category="business",
+            language="en",
+            page_size=max_items
+        )
+        return response.get("articles", [])
     except Exception as e:
-        st.error(f"GNews request failed: {e}")
+        st.warning(f"News API error: {e}")
         return []
 
 
-def display_gnews_titles(articles):
+def display_news(articles):
     if not articles:
         st.warning("No news retrieved.")
         return
@@ -224,6 +179,14 @@ def display_gnews_titles(articles):
             st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
         else:
             st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
+
+
+st.header("4) Important News")
+
+articles = get_market_news()
+
+display_news(articles)
+        
 # =========================================================
 # TICKERS
 # =========================================================

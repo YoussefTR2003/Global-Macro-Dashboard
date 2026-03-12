@@ -485,7 +485,7 @@ st.markdown(
 )
 
 st.caption(f"Sentiment score: {score}")
-st.header("4) Important News")
+st.header("5) Important News")
 
 articles = get_gnews_titles()
 

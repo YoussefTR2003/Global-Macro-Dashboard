@@ -490,7 +490,7 @@ st.markdown(
 
 
         
-st.caption(f"Sentiment score: {score}")
+st.metric("Market Sentiment Score", score)
 st.header("5) Important News")
 
 articles = get_market_news()

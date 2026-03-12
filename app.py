@@ -458,3 +458,5 @@ def display_news(articles):
             st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
         else:
             st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
+
+display_news(articles)

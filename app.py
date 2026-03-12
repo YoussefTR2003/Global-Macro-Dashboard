@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 from fredapi import Fred
 import plotly.express as px
+import requests 
 
 # =========================================================
 # PAGE CONFIG
@@ -23,11 +24,49 @@ fred = Fred(api_key=st.secrets["FRED_API_KEY"])
 # =========================================================
 # SIDEBAR
 # =========================================================
+@st.cache_data(ttl=3600)
+def get_fred_release_calendar():
+    api_key = st.secrets["FRED_API_KEY"]
+    url = "https://api.stlouisfed.org/fred/releases/dates"
+
+    params = {
+        "api_key": api_key,
+        "file_type": "json",
+        "include_release_dates_with_no_data": "false"
+    }
+
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        data = r.json()
+        return data.get("release_dates", [])
+    except Exception as e:
+        st.sidebar.warning(f"Calendar error: {e}")
+        return []
+
 st.sidebar.header("Dashboard Settings")
 
 st.sidebar.image("assets/Image.jpg", width=120)
 st.sidebar.markdown("**Youssef Triki**")
 st.sidebar.caption("EDHEC Business School — MSc Finance")
+
+st.sidebar.subheader("Upcoming Economic Releases")
+
+release_dates = get_fred_release_calendar()
+
+if release_dates:
+    release_df = pd.DataFrame(release_dates)
+    release_df["date"] = pd.to_datetime(release_df["date"])
+    today = pd.Timestamp.today().normalize()
+
+    next_releases = release_df[release_df["date"] >= today].sort_values("date").head(5)
+
+    if not next_releases.empty:
+        for _, row in next_releases.iterrows():
+            st.sidebar.write(f"• {row['date'].date()}")
+    else:
+        st.sidebar.caption("No upcoming releases found.")
+else:
+    st.sidebar.caption("Calendar unavailable.")
 
 macro_start_date = st.sidebar.date_input(
     "Macro start date",
@@ -43,9 +82,11 @@ selected_macro = st.sidebar.selectbox(
         "Fed Funds Rate",
         "US 10Y Yield"
     ]
-)
+)       
 
 show_tables = st.sidebar.checkbox("Show detailed tables", value=True)
+
+
 
 
 
@@ -177,7 +218,6 @@ def display_news(articles):
             st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
         else:
             st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
-
 
 
 # =========================================================
@@ -313,6 +353,7 @@ with chart_col:
     )
     fig.update_layout(margin=dict(l=20, r=20, t=50, b=20))
     st.plotly_chart(fig, use_container_width=True)
+
 
 # =========================================================
 # 2) EQUITIES & INDICES
@@ -455,4 +496,3 @@ st.header("5) Important News")
 articles = get_market_news()
 
 display_news(articles)
-

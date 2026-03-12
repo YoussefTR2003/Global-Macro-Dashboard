@@ -391,6 +391,7 @@ with col_com:
 # =========================================================
 # 4) IMPORTANT NEWS
 # =========================================================
+st.json(news_items[0])
 def display_news_cards(news_items, max_items=12):
     if not news_items:
         st.warning("No news retrieved.")

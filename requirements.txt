@@ -4,3 +4,4 @@ plotly
 yfinance
 fredapi
 requests
+newsapi-python

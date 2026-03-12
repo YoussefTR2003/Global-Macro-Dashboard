@@ -51,18 +51,22 @@ news_source = st.sidebar.selectbox(
 # =========================================================
 @st.cache_data(ttl=3600)
 def get_macro_data():
+
     cpi = fred.get_series("CPIAUCSL").to_frame("CPI")
     unrate = fred.get_series("UNRATE").to_frame("Unemployment Rate")
     fedfunds = fred.get_series("FEDFUNDS").to_frame("Fed Funds Rate")
     dgs10 = fred.get_series("DGS10").to_frame("US 10Y Yield")
 
-    # Daily -> monthly
     dgs10 = dgs10.resample("MS").mean()
 
     macro = pd.concat([cpi, unrate, fedfunds, dgs10], axis=1)
-    macro = macro.sort_index()
-    return macro
 
+    macro["Inflation YoY"] = macro["CPI"].pct_change(12) * 100
+    macro["Inflation MoM"] = macro["CPI"].pct_change(1) * 100
+
+    macro = macro.sort_index()
+
+    return macro
 
 @st.cache_data(ttl=1800)
 def get_market_snapshot(tickers_dict):

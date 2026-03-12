@@ -389,27 +389,56 @@ with col_com:
             st.dataframe(commodities_df, use_container_width=True)
 
 # =========================================================
-# 3) IMPORTANT NEWS
+# 4) IMPORTANT NEWS
 # =========================================================
-with st.expander("News feed", expanded=True):
-    news_items = get_news_for_ticker(news_source)
+def display_news_cards(news_items, max_items=12):
+    if not news_items:
+        st.warning("No news retrieved.")
+        return
 
-    important_news = []
-    other_news = []
-
-    for item in news_items:
+    for item in news_items[:max_items]:
         content = item.get("content", {})
-        title = content.get("title") or item.get("title") or ""
 
-        if is_geopolitical(title):
-            important_news.append(item)
-        else:
-            other_news.append(item)
+        title = (
+            content.get("title")
+            or item.get("title")
+            or "No title"
+        )
 
-    if important_news:
-        st.subheader("Important / Geopolitical News")
-        display_news_cards(important_news, max_items=8)
+        publisher = (
+            content.get("provider", {}).get("displayName")
+            or item.get("publisher")
+            or "Unknown source"
+        )
 
-    if other_news:
-        st.subheader("Other Market News")
-        display_news_cards(other_news, max_items=6)
+        link = (
+            content.get("canonicalUrl", {}).get("url")
+            or item.get("link")
+            or "#"
+        )
+
+        pubdate = content.get("pubDate", "")
+        summary = content.get("summary", "")
+
+        related_tickers = []
+        finance_items = content.get("finance", {}).get("result", [])
+        for r in finance_items:
+            symbol = r.get("symbol")
+            if symbol:
+                related_tickers.append(symbol)
+
+        card_color = "#ffe6e6" if is_geopolitical(title) else "#f7f7f7"
+        border_color = "red" if is_geopolitical(title) else "#999"
+
+        st.markdown(
+            f"""
+            <div style='padding:12px; border-left:6px solid {border_color}; background-color:{card_color}; margin-bottom:12px; border-radius:6px;'>
+                <b>{title}</b><br>
+                <span style='font-size:13px;'><i>{publisher}</i></span><br>
+                <span style='font-size:12px;'>{pubdate}</span><br>
+                <span style='font-size:12px;'>Related tickers: {related_tickers}</span><br><br>
+                <a href='{link}' target='_blank'>Open article</a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )

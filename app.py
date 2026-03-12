@@ -448,14 +448,11 @@ st.markdown(
 )
 
 
-
-st.header("4) Important News")
-
-articles = get_market_news()
-
-display_news(articles)
         
 st.caption(f"Sentiment score: {score}")
 st.header("5) Important News")
 
+articles = get_market_news()
+
+display_news(articles)
 

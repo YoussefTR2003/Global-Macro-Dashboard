@@ -392,12 +392,6 @@ with col_com:
 # 4) IMPORTANT NEWS
 # =========================================================
 
-
-st.header("4) Important News")
-
-articles = get_gnews_titles()
-
-display_gnews_titles(articles)
 import requests
 
 def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
@@ -417,9 +411,10 @@ def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
         r = requests.get(url, params=params)
         data = r.json()
         return data.get("articles", [])
-
     except Exception:
         return []
+
+
 def display_gnews_titles(articles):
 
     if not articles:
@@ -434,10 +429,17 @@ def display_gnews_titles(articles):
         date = article.get("publishedAt", "")
 
         if is_geopolitical(title):
-            st.markdown(
-                f"🔴 **[{title}]({url})**  \n{source} — {date}"
-            )
+            st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
         else:
-            st.markdown(
-                f"• **[{title}]({url})**  \n{source} — {date}"
-            )
+            st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
+
+
+# =========================================================
+# IMPORTANT NEWS
+# =========================================================
+
+st.header("4) Important News")
+
+articles = get_gnews_titles()
+
+display_gnews_titles(articles)

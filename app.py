@@ -18,7 +18,6 @@ st.caption("Macro data, major equity indices, key stocks, and important market/g
 # =========================================================
 # FRED CONFIG
 # =========================================================
-# Recommandé : utiliser st.secrets["1cd7868d066a57fadd97344b2953d236"]
 fred = Fred(api_key=st.secrets["1cd7868d066a57fadd97344b2953d236"])
 
 # =========================================================

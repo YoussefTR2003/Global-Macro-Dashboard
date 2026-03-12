@@ -244,6 +244,23 @@ asia_stocks = {
     "TSMC": "2330.TW",
     "BYD": "1211.HK"
 }
+fx_tickers = {
+    "EUR/USD": "EURUSD=X",
+    "USD/JPY": "JPY=X",
+    "GBP/USD": "GBPUSD=X",
+    "USD/CHF": "CHF=X",
+    "AUD/USD": "AUDUSD=X",
+    "USD/CNH": "CNH=X"
+}
+
+commodities_tickers = {
+    "Gold": "GC=F",
+    "Silver": "SI=F",
+    "Brent": "BZ=F",
+    "WTI": "CL=F",
+    "Copper": "HG=F",
+    "Natural Gas": "NG=F"
+}
 
 # =========================================================
 # 1) MACRO DATA
@@ -346,6 +363,30 @@ with tab_asia:
     if show_tables:
         with st.expander("See Asian stocks table"):
             st.dataframe(asia_stocks_df, use_container_width=True)
+# =========================================================
+# 3) FX & COMMODITIES
+# =========================================================
+st.header("3) FX & Commodities")
+
+col_fx, col_com = st.columns(2)
+
+with col_fx:
+    st.subheader("FX")
+    fx_df = get_market_snapshot(fx_tickers)
+    display_market_metrics(fx_df, n_cols=2)
+
+    if show_tables:
+        with st.expander("See FX table"):
+            st.dataframe(fx_df, use_container_width=True)
+
+with col_com:
+    st.subheader("Commodities")
+    commodities_df = get_market_snapshot(commodities_tickers)
+    display_market_metrics(commodities_df, n_cols=2)
+
+    if show_tables:
+        with st.expander("See commodities table"):
+            st.dataframe(commodities_df, use_container_width=True)
 
 # =========================================================
 # 3) IMPORTANT NEWS

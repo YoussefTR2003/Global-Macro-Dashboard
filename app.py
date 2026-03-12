@@ -47,10 +47,7 @@ selected_macro = st.sidebar.selectbox(
 
 show_tables = st.sidebar.checkbox("Show detailed tables", value=True)
 
-news_source = st.sidebar.selectbox(
-    "News source ticker",
-    ["^GSPC", "^NDX", "^TNX", "CL=F", "GC=F", "EURUSD=X", "AAPL", "MSFT", "NVDA"]
-)
+
 
 # =========================================================
 # HELPERS

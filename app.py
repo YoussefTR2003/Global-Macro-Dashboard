@@ -171,7 +171,48 @@ def display_news_cards(news_items, max_items=12):
                 unsafe_allow_html=True
             )
 
+import requests
 
+def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
+    api_key = st.secrets.get("GNEWS_API_KEY", None)
+
+    if api_key is None:
+        st.error("GNEWS_API_KEY not found in Streamlit secrets.")
+        return []
+
+    url = "https://gnews.io/api/v4/search"
+
+    params = {
+        "q": query,
+        "lang": "en",
+        "max": max_items,
+        "apikey": api_key
+    }
+
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        data = r.json()
+        return data.get("articles", [])
+    except Exception as e:
+        st.error(f"GNews request failed: {e}")
+        return []
+
+
+def display_gnews_titles(articles):
+    if not articles:
+        st.warning("No news retrieved.")
+        return
+
+    for article in articles:
+        title = article.get("title", "No title")
+        url = article.get("url", "#")
+        source = article.get("source", {}).get("name", "Unknown source")
+        date = article.get("publishedAt", "")
+
+        if is_geopolitical(title):
+            st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
+        else:
+            st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
 # =========================================================
 # TICKERS
 # =========================================================
@@ -388,35 +429,7 @@ with col_com:
         with st.expander("See commodities table"):
             st.dataframe(commodities_df, use_container_width=True)
 
-# =========================================================
-# 4) IMPORTANT NEWS
-# =========================================================
 
-import requests
-
-def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
-    api_key = st.secrets.get("GNEWS_API_KEY", None)
-
-    if api_key is None:
-        st.error("GNEWS_API_KEY not found in Streamlit secrets.")
-        return []
-
-    url = "https://gnews.io/api/v4/search"
-
-    params = {
-        "q": query,
-        "lang": "en",
-        "max": max_items,
-        "apikey": api_key
-    }
-
-    try:
-        r = requests.get(url, params=params, timeout=10)
-        data = r.json()
-        return data.get("articles", [])
-    except Exception as e:
-        st.error(f"GNews request failed: {e}")
-        return []
 # =========================================================
 # IMPORTANT NEWS
 # =========================================================

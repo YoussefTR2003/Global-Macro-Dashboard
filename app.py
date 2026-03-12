@@ -436,8 +436,55 @@ with col_com:
 
 # =========================================================
 # IMPORTANT NEWS
+
 # =========================================================
 
+# =========================================================
+# 4) MARKET SENTIMENT
+# =========================================================
+
+st.header("4) Market Sentiment")
+
+score = 0
+
+spx = us_indices_df.loc[us_indices_df["Name"]=="S&P 500","Daily Change %"].values
+vix = us_indices_df.loc[us_indices_df["Name"]=="VIX","Daily Change %"].values
+gold = commodities_df.loc[commodities_df["Name"]=="Gold","Daily Change %"].values
+brent = commodities_df.loc[commodities_df["Name"]=="Brent","Daily Change %"].values
+
+if len(spx)>0 and spx[0] > 0:
+    score += 1
+else:
+    score -= 1
+
+if len(vix)>0 and vix[0] > 0:
+    score -= 1
+else:
+    score += 1
+
+if len(gold)>0 and gold[0] > 0.5:
+    score -= 1
+
+if len(brent)>0 and brent[0] > 1:
+    score -= 1
+
+
+if score >= 2:
+    sentiment = "RISK ON"
+    color = "green"
+elif score <= -1:
+    sentiment = "RISK OFF"
+    color = "red"
+else:
+    sentiment = "NEUTRAL"
+    color = "orange"
+
+st.markdown(
+    f"<h2 style='color:{color}; text-align:center'>{sentiment}</h2>",
+    unsafe_allow_html=True
+)
+
+st.caption(f"Sentiment score: {score}")
 st.header("4) Important News")
 
 articles = get_gnews_titles()

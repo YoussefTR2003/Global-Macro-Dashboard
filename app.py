@@ -36,7 +36,13 @@ macro_start_date = st.sidebar.date_input(
 
 selected_macro = st.sidebar.selectbox(
     "Select macro indicator",
-    ["CPI", "Unemployment Rate", "Fed Funds Rate", "US 10Y Yield"]
+    [
+        "Inflation YoY",
+        "Inflation MoM",
+        "Unemployment Rate",
+        "Fed Funds Rate",
+        "US 10Y Yield"
+    ]
 )
 
 show_tables = st.sidebar.checkbox("Show detailed tables", value=True)

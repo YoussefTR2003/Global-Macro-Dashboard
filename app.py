@@ -25,7 +25,7 @@ fred = Fred(api_key=st.secrets["FRED_API_KEY"])
 # =========================================================
 st.sidebar.header("Dashboard Settings")
 
-st.sidebar.image("assets/image.jpg", width=120)
+st.sidebar.image("assets/Image.jpg", width=120)
 st.sidebar.markdown("**Youssef Triki**")
 st.sidebar.caption("EDHEC Business School — MSc Finance")
 

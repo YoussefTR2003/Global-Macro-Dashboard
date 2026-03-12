@@ -147,46 +147,7 @@ def display_market_metrics(df, n_cols=4):
 
 
 
-from newsapi import NewsApiClient
 
-newsapi = NewsApiClient(api_key=st.secrets.get("NEWSAPI_KEY"))
-
-def get_market_news(max_items=10):
-    try:
-        response = newsapi.get_top_headlines(
-            category="business",
-            language="en",
-            page_size=max_items
-        )
-        return response.get("articles", [])
-    except Exception as e:
-        st.warning(f"News API error: {e}")
-        return []
-
-
-def display_news(articles):
-    if not articles:
-        st.warning("No news retrieved.")
-        return
-
-    for article in articles:
-        title = article.get("title", "No title")
-        url = article.get("url", "#")
-        source = article.get("source", {}).get("name", "Unknown source")
-        date = article.get("publishedAt", "")
-
-        if is_geopolitical(title):
-            st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
-        else:
-            st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
-
-
-st.header("4) Important News")
-
-articles = get_market_news()
-
-display_news(articles)
-        
 # =========================================================
 # TICKERS
 # =========================================================
@@ -454,9 +415,46 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
+
+st.header("4) Important News")
+
+articles = get_market_news()
+
+display_news(articles)
+        
 st.caption(f"Sentiment score: {score}")
 st.header("5) Important News")
 
-articles = get_gnews_titles()
+from newsapi import NewsApiClient
 
-display_gnews_titles(articles)
+newsapi = NewsApiClient(api_key=st.secrets.get("NEWSAPI_KEY"))
+
+def get_market_news(max_items=10):
+    try:
+        response = newsapi.get_top_headlines(
+            category="business",
+            language="en",
+            page_size=max_items
+        )
+        return response.get("articles", [])
+    except Exception as e:
+        st.warning(f"News API error: {e}")
+        return []
+
+
+def display_news(articles):
+    if not articles:
+        st.warning("No news retrieved.")
+        return
+
+    for article in articles:
+        title = article.get("title", "No title")
+        url = article.get("url", "#")
+        source = article.get("source", {}).get("name", "Unknown source")
+        date = article.get("publishedAt", "")
+
+        if is_geopolitical(title):
+            st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
+        else:
+            st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")

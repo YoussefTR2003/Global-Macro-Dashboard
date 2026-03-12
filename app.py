@@ -395,7 +395,54 @@ st.header("3) Important News")
 
 with st.expander("News feed", expanded=True):
     news_items = get_news_for_ticker(news_source)
-    display_news_cards(news_items, max_items=12)
-# =========================================================
-# 2) FX
-# =========================================================
+def display_news_cards(news_items, max_items=12):
+    if not news_items:
+        st.warning("No news retrieved.")
+        return
+
+    for item in news_items[:max_items]:
+        content = item.get("content", {})
+
+        title = (
+            content.get("title")
+            or item.get("title")
+            or "No title"
+        )
+
+        publisher = (
+            content.get("provider", {}).get("displayName")
+            or item.get("publisher")
+            or "Unknown source"
+        )
+
+        link = (
+            content.get("canonicalUrl", {}).get("url")
+            or item.get("link")
+            or "#"
+        )
+
+        pubdate = content.get("pubDate", "")
+        summary = content.get("summary", "")
+
+        related_tickers = []
+        finance_items = content.get("finance", {}).get("result", [])
+        for r in finance_items:
+            symbol = r.get("symbol")
+            if symbol:
+                related_tickers.append(symbol)
+
+        card_color = "#ffe6e6" if is_geopolitical(title) else "#f7f7f7"
+        border_color = "red" if is_geopolitical(title) else "#999"
+
+        st.markdown(
+            f"""
+            <div style='padding:12px; border-left:6px solid {border_color}; background-color:{card_color}; margin-bottom:12px; border-radius:6px;'>
+                <b>{title}</b><br>
+                <span style='font-size:13px;'><i>{publisher}</i></span><br>
+                <span style='font-size:12px;'>{pubdate}</span><br>
+                <span style='font-size:12px;'>Related tickers: {related_tickers}</span><br><br>
+                <a href='{link}' target='_blank'>Open article</a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )

@@ -459,4 +459,3 @@ st.caption(f"Sentiment score: {score}")
 st.header("5) Important News")
 
 
-display_news(articles)

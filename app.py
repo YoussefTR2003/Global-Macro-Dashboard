@@ -391,57 +391,53 @@ with col_com:
 # =========================================================
 # 4) IMPORTANT NEWS
 # =========================================================
-st.json(news_items[0])
-def display_news_cards(news_items, max_items=12):
-    if not news_items:
+
+
+st.header("4) Important News")
+
+articles = get_gnews_titles()
+
+display_gnews_titles(articles)
+import requests
+
+def get_gnews_titles(query="finance OR economy OR geopolitics", max_items=10):
+
+    api_key = st.secrets["GNEWS_API_KEY"]
+
+    url = "https://gnews.io/api/v4/search"
+
+    params = {
+        "q": query,
+        "lang": "en",
+        "max": max_items,
+        "apikey": api_key
+    }
+
+    try:
+        r = requests.get(url, params=params)
+        data = r.json()
+        return data.get("articles", [])
+
+    except Exception:
+        return []
+def display_gnews_titles(articles):
+
+    if not articles:
         st.warning("No news retrieved.")
         return
 
-    for item in news_items[:max_items]:
-        content = item.get("content", {}) if isinstance(item, dict) else {}
+    for article in articles:
 
-        title = content.get("title") or item.get("title") or item.get("headline") or "No title"
+        title = article.get("title", "No title")
+        url = article.get("url", "#")
+        source = article.get("source", {}).get("name", "Unknown source")
+        date = article.get("publishedAt", "")
 
-        provider = content.get("provider", {})
-        if not isinstance(provider, dict):
-            provider = {}
-
-        publisher = provider.get("displayName") or item.get("publisher") or "Unknown source"
-
-        canonical = content.get("canonicalUrl", {})
-        if not isinstance(canonical, dict):
-            canonical = {}
-
-        link = canonical.get("url") or item.get("link") or "#"
-
-        pubdate = content.get("pubDate") or item.get("pubDate") or ""
-        summary = content.get("summary") or item.get("summary") or ""
-
-        related_tickers = []
-        finance = content.get("finance", {})
-        if isinstance(finance, dict):
-            finance_items = finance.get("result", [])
-            if isinstance(finance_items, list):
-                for r in finance_items:
-                    if isinstance(r, dict):
-                        symbol = r.get("symbol")
-                        if symbol:
-                            related_tickers.append(symbol)
-
-        important = is_geopolitical(title)
-        card_color = "#ffe6e6" if important else "#f7f7f7"
-        border_color = "red" if important else "#999"
-
-        st.markdown(
-            f"""
-            <div style='padding:12px; border-left:6px solid {border_color}; background-color:{card_color}; margin-bottom:12px; border-radius:6px;'>
-                <b>{title}</b><br>
-                <span style='font-size:13px;'><i>{publisher}</i></span><br>
-                <span style='font-size:12px;'>{pubdate}</span><br>
-                <span style='font-size:12px;'>Related tickers: {related_tickers}</span><br>
-                <span style='font-size:13px;'>{summary}</span><br><br>
-                <a href='{link}' target='_blank'>Open article</a>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        if is_geopolitical(title):
+            st.markdown(
+                f"🔴 **[{title}]({url})**  \n{source} — {date}"
+            )
+        else:
+            st.markdown(
+                f"• **[{title}]({url})**  \n{source} — {date}"
+            )

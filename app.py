@@ -23,6 +23,10 @@ fred = Fred(api_key=st.secrets["FRED_API_KEY"])
 # =========================================================
 # SIDEBAR
 # =========================================================
+st.sidebar.image("Image.jpg", width=120)
+st.sidebar.markdown("**Youssef Triki**")
+st.sidebar.markdown("MiM Finance — EDHEC")
+st.sidebar.markdown("[GitHub](https://github.com/yourgithub)")
 st.sidebar.header("Dashboard Settings")
 
 macro_start_date = st.sidebar.date_input(

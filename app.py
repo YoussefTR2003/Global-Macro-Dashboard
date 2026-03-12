@@ -27,21 +27,43 @@ fred = Fred(api_key=st.secrets["FRED_API_KEY"])
 @st.cache_data(ttl=3600)
 def get_fred_release_calendar():
     api_key = st.secrets["FRED_API_KEY"]
-    url = "https://api.stlouisfed.org/fred/releases/dates"
 
-    params = {
+    releases_url = "https://api.stlouisfed.org/fred/releases"
+    dates_url = "https://api.stlouisfed.org/fred/releases/dates"
+
+    base_params = {
         "api_key": api_key,
-        "file_type": "json",
-        "include_release_dates_with_no_data": "false"
+        "file_type": "json"
     }
 
     try:
-        r = requests.get(url, params=params, timeout=10)
-        data = r.json()
-        return data.get("release_dates", [])
-    except Exception as e:
-        st.sidebar.warning(f"Calendar error: {e}")
-        return []
+        releases_resp = requests.get(releases_url, params=base_params, timeout=10)
+        dates_resp = requests.get(
+            dates_url,
+            params={**base_params, "include_release_dates_with_no_data": "false"},
+            timeout=10
+        )
+
+        releases_data = releases_resp.json().get("releases", [])
+        dates_data = dates_resp.json().get("release_dates", [])
+
+        releases_df = pd.DataFrame(releases_data)
+        dates_df = pd.DataFrame(dates_data)
+
+        if releases_df.empty or dates_df.empty:
+            return pd.DataFrame()
+
+        # garde seulement les colonnes utiles
+        releases_df = releases_df[["id", "name"]].rename(columns={"id": "release_id"})
+        dates_df["release_id"] = pd.to_numeric(dates_df["release_id"], errors="coerce")
+
+        calendar_df = dates_df.merge(releases_df, on="release_id", how="left")
+        calendar_df["date"] = pd.to_datetime(calendar_df["date"], errors="coerce")
+
+        return calendar_df.sort_values("date")
+
+    except Exception:
+        return pd.DataFrame()
 
 st.sidebar.header("Dashboard Settings")
 
@@ -51,18 +73,21 @@ st.sidebar.caption("EDHEC Business School — MSc Finance")
 
 st.sidebar.subheader("Upcoming Economic Releases")
 
-release_dates = get_fred_release_calendar()
+calendar_df = get_fred_release_calendar()
 
-if release_dates:
-    release_df = pd.DataFrame(release_dates)
-    release_df["date"] = pd.to_datetime(release_df["date"])
+if not calendar_df.empty:
     today = pd.Timestamp.today().normalize()
 
-    next_releases = release_df[release_df["date"] >= today].sort_values("date").head(5)
+    next_releases = (
+        calendar_df[calendar_df["date"] >= today]
+        .dropna(subset=["name"])
+        .sort_values("date")
+        .head(5)
+    )
 
     if not next_releases.empty:
         for _, row in next_releases.iterrows():
-            st.sidebar.write(f"• {row['date'].date()}")
+            st.sidebar.write(f"• {row['date'].date()} — {row['name']}")
     else:
         st.sidebar.caption("No upcoming releases found.")
 else:

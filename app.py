@@ -203,7 +203,7 @@ def get_government_rates():
         if df.empty:
             return pd.DataFrame()
 
-        target_symbols = ["US10Y", "DE10Y", "FR10Y", "IT10Y", "GB10Y", "JP10Y"]
+        target_symbols = ["US10Y", "DE10Y", "France 30Y", "IT10Y", "GB10Y", "JP10Y"]
 
         df = df[df["Symbol"].isin(target_symbols)]
 

@@ -5,3 +5,4 @@ yfinance
 fredapi
 requests
 newsapi-python
+tradingeconomics

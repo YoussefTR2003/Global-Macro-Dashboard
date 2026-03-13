@@ -211,7 +211,7 @@ def get_france_10y():
 
         if france.empty:
             st.write("TE raw bond sample:")
-            st.dataframe(df.head(50), width="True")
+            st.dataframe(df.head(50), width="content")
             return None
 
         value = france.iloc[0]["Last"]

@@ -377,11 +377,10 @@ st.header("4) Government Rates")
 gov_rates_df = get_government_rates()
 
 if not gov_rates_df.empty:
-
-    cols = st.columns(4)
+    cols = st.columns(3)
 
     for i, row in gov_rates_df.iterrows():
-        cols[i % 4].metric(
+        cols[i % 3].metric(
             label=row["Name"],
             value=f"{row['Yield']}%"
         )
@@ -389,7 +388,6 @@ if not gov_rates_df.empty:
     if show_tables:
         with st.expander("See government rates table"):
             st.dataframe(gov_rates_df, use_container_width=True)
-
 else:
     st.warning("No government rate data available.")
 

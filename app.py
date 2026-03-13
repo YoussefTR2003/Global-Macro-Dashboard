@@ -189,58 +189,54 @@ def get_market_snapshot(tickers_dict):
 
 
 @st.cache_data(ttl=1800)
-def get_france_10y():
+def get_major_10y_yields():
+
     try:
         te.login(st.secrets["TE_API_KEY"])
 
         df = te.getMarketsData(marketsField="bond", output_type="df")
 
         if df is None or len(df) == 0:
-            return None
+            return pd.DataFrame()
 
         df["Name"] = df["Name"].astype(str)
         df["Symbol"] = df["Symbol"].astype(str)
 
-        
-        st.write("TE raw bond sample:")
-        st.dataframe["Close"](df.head(50), width="content")
-        return None
+        countries = [
+            "United States",
+            "Germany",
+            "France",
+            "United Kingdom",
+            "Japan",
+            "Italy",
+            "Spain",
+            "Canada"
+        ]
 
-        value = france.iloc[0]["Last"]
-        return round(float(value), 3)
-    
-    except Exception as e:
-        st.error(f"France 10Y error: {e}")
-        return None
+        rows = []
 
-def display_market_metrics(df, n_cols=4):
-    if df.empty:
-        st.warning("No data available.")
-        return
+        for country in countries:
 
-    cols = st.columns(n_cols)
+            bond = df[
+                df["Name"].str.contains(country, case=False, na=False) &
+                (
+                    df["Name"].str.contains("10", case=False, na=False) |
+                    df["Symbol"].str.contains("10Y", case=False, na=False)
+                )
+            ]
 
-    for i, row in df.iterrows():
-        cols[i % n_cols].metric(
-            label=row["Name"],
-            value=row["Last"],
-            delta=f"{row['Daily Change %']}%"
-        )
-def get_market_news():
+            if not bond.empty:
 
-    try:
+                rows.append({
+                    "Name": f"{country} 10Y",
+                    "Last": round(float(bond.iloc[0]["Last"]), 3),
+                    "Daily Change %": round(float(bond.iloc[0]["Chg"]), 3)
+                })
 
-        response = newsapi.get_top_headlines(
-            category="business",
-            language="en",
-            page_size=10
-        )
+        return pd.DataFrame(rows)
 
-        return response.get("articles", [])
-
-    except:
-        return []
-
+    except Exception:
+        return pd.DataFrame()
 
 def display_news(articles):
 

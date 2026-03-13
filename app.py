@@ -22,7 +22,7 @@ st.caption("Macro data, major equity indices, key stocks, and important market/g
 
 
 # =========================================================
-# API CONF
+# API CONFIG
 # =========================================================
 
 fred = Fred(api_key=st.secrets["FRED_API_KEY"])
@@ -35,7 +35,6 @@ newsapi = NewsApiClient(api_key=st.secrets["NEWSAPI_KEY"])
 
 @st.cache_data(ttl=3600)
 def get_fred_release_calendar():
-
     api_key = st.secrets["FRED_API_KEY"]
 
     releases_url = "https://api.stlouisfed.org/fred/releases"
@@ -47,7 +46,6 @@ def get_fred_release_calendar():
     }
 
     try:
-
         releases_resp = requests.get(releases_url, params=base_params, timeout=10)
         dates_resp = requests.get(
             dates_url,
@@ -87,7 +85,6 @@ st.sidebar.subheader("Upcoming Economic Releases")
 calendar_df = get_fred_release_calendar()
 
 if not calendar_df.empty:
-
     today = pd.Timestamp.today().normalize()
 
     next_releases = (
@@ -97,12 +94,13 @@ if not calendar_df.empty:
         .head(5)
     )
 
-    for _, row in next_releases.iterrows():
-        st.sidebar.write(f"• {row['date'].date()} — {row['name']}")
-
+    if not next_releases.empty:
+        for _, row in next_releases.iterrows():
+            st.sidebar.write(f"• {row['date'].date()} — {row['name']}")
+    else:
+        st.sidebar.caption("No upcoming releases found.")
 else:
     st.sidebar.caption("Calendar unavailable.")
-
 
 macro_start_date = st.sidebar.date_input(
     "Macro start date",
@@ -129,7 +127,6 @@ show_tables = st.sidebar.checkbox("Show detailed tables", value=True)
 
 @st.cache_data(ttl=3600)
 def get_macro_data():
-
     cpi = fred.get_series("CPIAUCSL").to_frame("CPI")
     unrate = fred.get_series("UNRATE").to_frame("Unemployment Rate")
     fedfunds = fred.get_series("FEDFUNDS").to_frame("Fed Funds Rate")
@@ -149,18 +146,16 @@ def get_macro_data():
 
 @st.cache_data(ttl=1800)
 def get_market_snapshot(tickers_dict):
-
     rows = []
 
     for label, ticker in tickers_dict.items():
-
         try:
-
             hist = yf.download(
                 ticker,
                 period="5d",
                 interval="1d",
-                progress=False
+                progress=False,
+                auto_adjust=False
             )
 
             if hist.empty or len(hist) < 2:
@@ -168,7 +163,6 @@ def get_market_snapshot(tickers_dict):
 
             last_close = float(hist["Close"].iloc[-1])
             prev_close = float(hist["Close"].iloc[-2])
-
             change = ((last_close / prev_close) - 1) * 100
 
             rows.append({
@@ -183,7 +177,7 @@ def get_market_snapshot(tickers_dict):
     df = pd.DataFrame(rows)
 
     if not df.empty:
-        df = df.sort_values("Daily Change %", ascending=False)
+        df = df.sort_values("Daily Change %", ascending=False).reset_index(drop=True)
 
     return df
 
@@ -191,7 +185,8 @@ def get_market_snapshot(tickers_dict):
 @st.cache_data(ttl=1800)
 def get_major_10y_yields():
     try:
-        te.login(st.secrets["TE_API_KEY"])
+        te_key = st.secrets.get("TE_API_KEY", "guest:guest")
+        te.login(te_key)
 
         df = te.getMarketsData(marketsField="bond", output_type="df")
 
@@ -227,11 +222,12 @@ def get_major_10y_yields():
                 last_val = bond.iloc[0].get("Last", None)
                 chg_val = bond.iloc[0].get("Chg", None)
 
-                rows.append({
-                    "Name": f"{country} 10Y",
-                    "Last": round(float(last_val), 3) if last_val is not None else None,
-                    "Daily Change %": round(float(chg_val), 3) if chg_val is not None else None
-                })
+                if last_val is not None:
+                    rows.append({
+                        "Name": f"{country} 10Y",
+                        "Last": round(float(last_val), 3),
+                        "Daily Change %": round(float(chg_val), 3) if chg_val is not None else None
+                    })
 
         return pd.DataFrame(rows)
 
@@ -239,8 +235,7 @@ def get_major_10y_yields():
         return pd.DataFrame()
 
 
-def display_market_metrics(df, n_cols=4):
-
+def display_market_metrics(df, n_cols=4, is_yield=False):
     if df.empty:
         st.warning("No data available.")
         return
@@ -248,32 +243,44 @@ def display_market_metrics(df, n_cols=4):
     cols = st.columns(n_cols)
 
     for i, row in df.iterrows():
-
         value = row["Last"]
+
         if isinstance(value, (int, float)):
-            value = f"{value}%"
+            if is_yield:
+                value = f"{value:.3f}%"
+            else:
+                value = f"{value:.2f}"
 
         delta = row.get("Daily Change %", None)
-
-        delta_text = None
-        if delta is not None and not pd.isna(delta):
-            delta_text = f"{delta}%"
+        delta_text = None if pd.isna(delta) else f"{delta}%"
 
         cols[i % n_cols].metric(
             label=row["Name"],
             value=value,
             delta=delta_text
         )
-def display_news(articles):
 
+
+def get_market_news():
+    try:
+        response = newsapi.get_top_headlines(
+            category="business",
+            language="en",
+            page_size=10
+        )
+        return response.get("articles", [])
+    except Exception:
+        return []
+
+
+def display_news(articles):
     if not articles:
         st.warning("No news retrieved.")
         return
 
     for article in articles:
-
-        title = article.get("title")
-        url = article.get("url")
+        title = article.get("title", "No title")
+        url = article.get("url", "#")
         source = article.get("source", {}).get("name", "")
         date = article.get("publishedAt", "")
 
@@ -308,25 +315,32 @@ commodities_tickers = {
 
 
 # =========================================================
-# 1 MACRO DATA
+# 1) MACRO DATA
 # =========================================================
 
 st.header("1) Macro Data")
 
 macro_df = get_macro_data()
-macro_df = macro_df.loc[str(macro_start_date):]
+macro_df = macro_df.loc[str(macro_start_date):].copy()
 
-metric_col, chart_col = st.columns([1,2])
+metric_col, chart_col = st.columns([1, 2])
 
 with metric_col:
-
     latest = macro_df[selected_macro].dropna()
 
-    st.metric(
-        selected_macro,
-        round(latest.iloc[-1],2),
-        round(((latest.iloc[-1]/latest.iloc[-2])-1)*100,2)
-    )
+    if len(latest) >= 2:
+        latest_value = round(latest.iloc[-1], 2)
+        delta_pct = round(((latest.iloc[-1] / latest.iloc[-2]) - 1) * 100, 2) if latest.iloc[-2] != 0 else None
+
+        st.metric(
+            label=selected_macro,
+            value=f"{latest_value}",
+            delta=f"{delta_pct}%" if delta_pct is not None else None
+        )
+
+    if show_tables:
+        with st.expander("See latest macro table"):
+            st.dataframe(macro_df.tail(18), width="stretch")
 
 with chart_col:
     plot_df = macro_df[[selected_macro]].dropna().reset_index()
@@ -340,89 +354,84 @@ with chart_col:
     )
 
     fig.update_layout(margin=dict(l=20, r=20, t=50, b=20))
-    st.plotly_chart(fig, use_container_width="stretch")
-    
-    def display_market_metrics(df, n_cols=4):
-        if df.empty:
-            st.warning("No data available.")
-            return
+    st.plotly_chart(fig, width="stretch")
 
-    cols = st.columns(n_cols)
-
-    for i, row in df.iterrows():
-        value = row["Last"]
-        if isinstance(value, (int, float)):
-            value = f"{value}%"
-
-        delta = row.get("Daily Change %", None)
-        delta_text = None if pd.isna(delta) else f"{delta}%"
-
-        cols[i % n_cols].metric(
-            label=row["Name"],
-            value=value,
-            delta=delta_text
-        )
 
 # =========================================================
-# 2 EQUITIES
+# 2) EQUITIES
 # =========================================================
 
 st.header("2) Major Equity Indices")
 
 us_indices_df = get_market_snapshot(us_indices)
-display_market_metrics(us_indices_df)
+display_market_metrics(us_indices_df, n_cols=4, is_yield=False)
+
+if show_tables:
+    with st.expander("See equity indices table"):
+        st.dataframe(us_indices_df, width="stretch")
 
 
 # =========================================================
-# 3 FX & COMMODITIES
+# 3) FX & COMMODITIES
 # =========================================================
 
 st.header("3) FX & Commodities")
 
-col1,col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
 with col1:
+    st.subheader("FX")
     fx_df = get_market_snapshot(fx_tickers)
-    display_market_metrics(fx_df,2)
+    display_market_metrics(fx_df, n_cols=2, is_yield=False)
+
+    if show_tables:
+        with st.expander("See FX table"):
+            st.dataframe(fx_df, width="stretch")
 
 with col2:
+    st.subheader("Commodities")
     com_df = get_market_snapshot(commodities_tickers)
-    display_market_metrics(com_df,2)
+    display_market_metrics(com_df, n_cols=2, is_yield=False)
+
+    if show_tables:
+        with st.expander("See commodities table"):
+            st.dataframe(com_df, width="stretch")
 
 
 # =========================================================
-# 4 GOVERNMENT RATES
+# 4) GOVERNMENT RATES
 # =========================================================
+
 st.header("4) Government Rates")
 
-france_10y = get_france_10y()
+rates_df = get_major_10y_yields()
+display_market_metrics(rates_df, n_cols=4, is_yield=True)
 
-if france_10y is not None:
-    st.metric("France 10Y OAT", f"{france_10y}%")
-else:
-    st.warning("France 10Y yield unavailable.")
+if show_tables:
+    with st.expander("See government rates table"):
+        st.dataframe(rates_df, width="stretch")
+
 
 # =========================================================
-# 5 MARKET SENTIMENT
+# 5) MARKET SENTIMENT
 # =========================================================
 
 st.header("5) Market Sentiment")
 
 score = 0
 
-spx = us_indices_df.loc[us_indices_df["Name"]=="S&P 500","Daily Change %"].values
-vix = us_indices_df.loc[us_indices_df["Name"]=="VIX","Daily Change %"].values
+spx = us_indices_df.loc[us_indices_df["Name"] == "S&P 500", "Daily Change %"].values
+vix = us_indices_df.loc[us_indices_df["Name"] == "VIX", "Daily Change %"].values
 
-if len(spx)>0 and spx[0] > 0:
+if len(spx) > 0 and spx[0] > 0:
     score += 1
 else:
     score -= 1
 
-if len(vix)>0 and vix[0] > 0:
+if len(vix) > 0 and vix[0] > 0:
     score -= 1
 else:
     score += 1
-
 
 if score >= 1:
     sentiment = "RISK ON"
@@ -431,12 +440,12 @@ elif score <= -1:
 else:
     sentiment = "NEUTRAL"
 
-st.metric("Market Sentiment Score",score)
+st.metric("Market Sentiment Score", score)
 st.write(f"Market regime: **{sentiment}**")
 
 
 # =========================================================
-# 6 NEWS
+# 6) NEWS
 # =========================================================
 
 st.header("6) Important News")

@@ -365,6 +365,12 @@ if not rates_df.empty:
             row["Name"],
             f"{row['Yield']}%"
         )
+         if show_tables:
+        with st.expander("See government rates table"):
+            st.dataframe(gov_rates_df, use_container_width=True)
+
+else:
+    st.warning("No government rate data available.")
 
 
 # =========================================================

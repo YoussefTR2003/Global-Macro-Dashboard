@@ -22,7 +22,7 @@ st.caption("Macro data, major equity indices, key stocks, and important market/g
 
 
 # =========================================================
-# API CONFIG
+# API CONF
 # =========================================================
 
 fred = Fred(api_key=st.secrets["FRED_API_KEY"])
@@ -387,7 +387,7 @@ if not gov_rates_df.empty:
 
     if show_tables:
         with st.expander("See government rates table"):
-            st.dataframe(gov_rates_df, use_container_width="stretch"))
+            st.dataframe(gov_rates_df, use_container_width="stretch")
 else:
     st.warning("No government rate data available.")
 

@@ -317,7 +317,7 @@ with chart_col:
     st.plotly_chart(fig, use_container_width="stretch")
     
     def display_market_metrics(df, n_cols=4):
-    if df.empty:
+        if df.empty:
         st.warning("No data available.")
         return
 

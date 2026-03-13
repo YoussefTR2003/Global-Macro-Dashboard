@@ -183,39 +183,54 @@ def get_market_snapshot(tickers_dict):
 
 
 @st.cache_data(ttl=1800)
-def get_major_10y_yields():
+def get_bond_dataframe():
+
     try:
         te.login(st.secrets.get("TE_API_KEY", "guest:guest"))
 
-        df = te.getMarketsData(marketsField="bond", type="10Y", output_type="df")
+        df = te.getMarketsData(marketsField="bond", output_type="df")
 
-        if df is None or df.empty:
+        if df is None:
             return pd.DataFrame()
 
-        countries = [
-            "United States",
-            "Germany",
-            "France",
-            "United Kingdom",
-            "Japan",
-            "Italy",
-            "Spain",
-            "Canada"
-        ]
-
-        rows = []
-        for country in countries:
-            bond = df[df["Name"].str.contains(country, case=False, na=False)]
-            if not bond.empty:
-                rows.append({
-                    "Name": f"{country} 10Y",
-                    "Yield": round(float(bond.iloc[0]["Last"]), 3)
-                })
-
-        return pd.DataFrame(rows)
+        return df
 
     except Exception:
         return pd.DataFrame()
+
+def extract_major_10y(df):
+
+    if df.empty:
+        return pd.DataFrame()
+
+    targets = {
+        "United States": "US 10Y",
+        "Germany": "Germany 10Y",
+        "France": "France 10Y",
+        "United Kingdom": "UK 10Y",
+        "Japan": "Japan 10Y",
+        "Italy": "Italy 10Y",
+        "Spain": "Spain 10Y",
+        "Canada": "Canada 10Y"
+    }
+
+    rows = []
+
+    for country, label in targets.items():
+
+        bond = df[
+            df["Name"].str.contains(country, case=False, na=False) &
+            df["Name"].str.contains("10", case=False, na=False)
+        ]
+
+        if not bond.empty:
+
+            rows.append({
+                "Name": label,
+                "Yield": round(float(bond.iloc[0]["Last"]), 3)
+            })
+
+    return pd.DataFrame(rows)
 
 
 def display_market_metrics(df, n_cols=4, is_yield=False):

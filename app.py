@@ -191,23 +191,35 @@ def get_market_snapshot(tickers_dict):
 @st.cache_data(ttl=1800)
 def get_france_10y():
     try:
-        te_key = st.secrets.get("TE_API_KEY", "guest:guest")
-        url = "https://api.tradingeconomics.com/markets/bond/france"
-        params = {"c": te_key, "f": "json"}
+        te.login(st.secrets["TE_API_KEY"])
 
-        r = requests.get(url, params=params, timeout=10)
-        r.raise_for_status()
-        data = r.json()
+        df = te.getMarketsData(marketsField="bond", output_type="df")
 
-        if not data:
+        if df is None or len(df) == 0:
             return None
 
-        return round(float(data[0]["Last"]), 3)
+        df["Name"] = df["Name"].astype(str)
+        df["Symbol"] = df["Symbol"].astype(str)
+
+        france = df[
+            df["Name"].str.contains("France", case=False, na=False) &
+            (
+                df["Name"].str.contains("10", case=False, na=False) |
+                df["Symbol"].str.contains("10Y", case=False, na=False)
+            )
+        ]
+
+        if france.empty:
+            st.write("TE raw bond sample:")
+            st.dataframe(df.head(20), width="stretch")
+            return None
+
+        value = france.iloc[0]["Last"]
+        return round(float(value), 3)
 
     except Exception as e:
         st.error(f"France 10Y error: {e}")
         return None
-
 
 def display_market_metrics(df, n_cols=4):
     if df.empty:

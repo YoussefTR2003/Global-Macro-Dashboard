@@ -240,6 +240,7 @@ def get_major_10y_yields():
 
 
 def display_market_metrics(df, n_cols=4):
+
     if df.empty:
         st.warning("No data available.")
         return
@@ -247,12 +248,16 @@ def display_market_metrics(df, n_cols=4):
     cols = st.columns(n_cols)
 
     for i, row in df.iterrows():
+
         value = row["Last"]
         if isinstance(value, (int, float)):
             value = f"{value}%"
 
         delta = row.get("Daily Change %", None)
-        delta_text = None if pd.isna(delta) else f"{delta}%"
+
+        delta_text = None
+        if delta is not None and not pd.isna(delta):
+            delta_text = f"{delta}%"
 
         cols[i % n_cols].metric(
             label=row["Name"],

@@ -190,32 +190,47 @@ def get_market_snapshot(tickers_dict):
 
 @st.cache_data(ttl=1800)
 def get_government_rates():
-
     try:
-
         te_key = st.secrets.get("TE_API_KEY", "guest:guest")
         te.login(te_key)
 
         data = te.getMarketsData(marketsField="bond")
-
         df = pd.DataFrame(data)
 
         if df.empty:
             return pd.DataFrame()
 
-        target_symbols = ["US10Y", "DE10Y", "France 30Y", "IT10Y", "GB10Y", "JP10Y"]
+        # debug once if needed
+        # st.dataframe(df.head(30), use_container_width=True)
 
-        df = df[df["Symbol"].isin(target_symbols)]
+        df["Name"] = df["Name"].astype(str)
 
-        df = df[["Name", "Last"]]
+        keep_countries = [
+            "United States",
+            "Germany",
+            "France",
+            "Italy",
+            "United Kingdom",
+            "Japan"
+        ]
 
-        df = df.rename(columns={"Last": "Yield"})
+        mask_country = df["Name"].str.contains("|".join(keep_countries), case=False, na=False)
+        mask_10y = df["Name"].str.contains("10", case=False, na=False) | df["Symbol"].astype(str).str.contains("10Y", case=False, na=False)
 
-        return df.reset_index(drop=True)
+        df = df[mask_country & mask_10y]
 
-    except Exception:
+        if df.empty:
+            return pd.DataFrame()
+
+        df = df[["Name", "Last"]].rename(columns={"Last": "Yield"})
+        df = df.dropna()
+        df = df.reset_index(drop=True)
+
+        return df
+
+    except Exception as e:
+        st.error(f"Government rates error: {e}")
         return pd.DataFrame()
-
 def display_market_metrics(df, n_cols=4):
 
     if df.empty:

@@ -190,7 +190,6 @@ def get_market_snapshot(tickers_dict):
 
 @st.cache_data(ttl=1800)
 def get_major_10y_yields():
-
     try:
         te.login(st.secrets["TE_API_KEY"])
 
@@ -216,7 +215,6 @@ def get_major_10y_yields():
         rows = []
 
         for country in countries:
-
             bond = df[
                 df["Name"].str.contains(country, case=False, na=False) &
                 (
@@ -226,11 +224,13 @@ def get_major_10y_yields():
             ]
 
             if not bond.empty:
+                last_val = bond.iloc[0].get("Last", None)
+                chg_val = bond.iloc[0].get("Chg", None)
 
                 rows.append({
                     "Name": f"{country} 10Y",
-                    "Last": round(float(bond.iloc[0]["Last"]), 3),
-                    "Daily Change %": round(float(bond.iloc[0]["Chg"]), 3)
+                    "Last": round(float(last_val), 3) if last_val is not None else None,
+                    "Daily Change %": round(float(chg_val), 3) if chg_val is not None else None
                 })
 
         return pd.DataFrame(rows)
@@ -238,6 +238,27 @@ def get_major_10y_yields():
     except Exception:
         return pd.DataFrame()
 
+
+def display_market_metrics(df, n_cols=4):
+    if df.empty:
+        st.warning("No data available.")
+        return
+
+    cols = st.columns(n_cols)
+
+    for i, row in df.iterrows():
+        value = row["Last"]
+        if isinstance(value, (int, float)):
+            value = f"{value}%"
+
+        delta = row.get("Daily Change %", None)
+        delta_text = None if pd.isna(delta) else f"{delta}%"
+
+        cols[i % n_cols].metric(
+            label=row["Name"],
+            value=value,
+            delta=delta_text
+        )
 def display_news(articles):
 
     if not articles:

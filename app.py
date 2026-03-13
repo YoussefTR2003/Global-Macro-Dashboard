@@ -387,7 +387,7 @@ if not gov_rates_df.empty:
 
     if show_tables:
         with st.expander("See government rates table"):
-            st.dataframe(gov_rates_df, use_container_width=True)
+            st.dataframe(gov_rates_df, use_container_width="stretch"))
 else:
     st.warning("No government rate data available.")
 

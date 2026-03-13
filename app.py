@@ -193,7 +193,7 @@ def get_france_10y():
     try:
         te.login(st.secrets["TE_API_KEY"])
 
-        df = te.getMarketsData(marketsField="bond", output_type="df")
+        df = te.getMarketsData(marketsField="BOND","10y", output_type="df")
 
         if df is None or len(df) == 0:
             return None
@@ -201,22 +201,14 @@ def get_france_10y():
         df["Name"] = df["Name"].astype(str)
         df["Symbol"] = df["Symbol"].astype(str)
 
-        france = df[
-            df["Name"].str.contains("France", case=False, na=False) &
-            (
-                df["Name"].str.contains("10", case=False, na=False) |
-                df["Symbol"].str.contains("10Y", case=False, na=False)
-            )
-        ]
-
-        if france.empty:
-            st.write("TE raw bond sample:")
-            st.dataframe(df.head(50), width="content")
-            return None
+        
+        st.write("TE raw bond sample:")
+        st.dataframe(df.head(50), width="content")
+        return None
 
         value = france.iloc[0]["Last"]
         return round(float(value), 3)
-
+    
     except Exception as e:
         st.error(f"France 10Y error: {e}")
         return None

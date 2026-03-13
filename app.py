@@ -353,24 +353,24 @@ with col2:
 
 st.header("4) Government Rates")
 
-rates_df = get_government_rates()
+gov_rates_df = get_government_rates()
 
-if not rates_df.empty:
+if not gov_rates_df.empty:
 
     cols = st.columns(4)
 
-    for i,row in rates_df.iterrows():
-
-        cols[i%4].metric(
-            row["Name"],
-            f"{row['Yield']}%"
+    for i, row in gov_rates_df.iterrows():
+        cols[i % 4].metric(
+            label=row["Name"],
+            value=f"{row['Yield']}%"
         )
+
     if show_tables:
         with st.expander("See government rates table"):
             st.dataframe(gov_rates_df, use_container_width=True)
-    else:
-        st.warning("No government rate data available.")
 
+else:
+    st.warning("No government rate data available.")
 
 # =========================================================
 # 5 MARKET SENTIMENT

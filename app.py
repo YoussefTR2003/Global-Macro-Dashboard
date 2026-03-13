@@ -391,16 +391,11 @@ rates_df = get_major_10y_yields()
 
 if not rates_df.empty:
     cols = st.columns(4)
-
     for i, row in rates_df.iterrows():
         cols[i % 4].metric(
             label=row["Name"],
             value=f"{row['Yield']}%"
         )
-
-    if show_tables:
-        with st.expander("See government rates table"):
-            st.dataframe(rates_df, width="stretch")
 else:
     st.warning("No government rate data available.")
 

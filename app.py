@@ -201,10 +201,21 @@ def get_government_rates():
             return pd.DataFrame()
 
         df = df[df["Symbol"].str.contains("10Y", na=False)]
+
+        keep_names = [
+            "United States 10Y",
+            "Germany 10Y",
+            "France 10Y",
+            "Italy 10Y",
+            "United Kingdom 10Y",
+            "Japan 10Y"
+        ]
+
+        df = df[df["Name"].isin(keep_names)]
         df = df[["Name", "Last"]].rename(columns={"Last": "Yield"})
         df = df.dropna()
 
-        return df.head(8)
+        return df.reset_index(drop=True)
 
     except Exception:
         return pd.DataFrame()

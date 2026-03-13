@@ -190,36 +190,31 @@ def get_market_snapshot(tickers_dict):
 
 @st.cache_data(ttl=1800)
 def get_government_rates():
+
     try:
+
         te_key = st.secrets.get("TE_API_KEY", "guest:guest")
         te.login(te_key)
 
         data = te.getMarketsData(marketsField="bond")
+
         df = pd.DataFrame(data)
 
         if df.empty:
             return pd.DataFrame()
 
-        df = df[df["Symbol"].str.contains("10Y", na=False)]
+        target_symbols = ["US10Y", "DE10Y", "FR10Y", "IT10Y", "GB10Y", "JP10Y"]
 
-        keep_names = [
-            "United States 10Y",
-            "Germany 10Y",
-            "France 10Y",
-            "Italy 10Y",
-            "United Kingdom 10Y",
-            "Japan 10Y"
-        ]
+        df = df[df["Symbol"].isin(target_symbols)]
 
-        df = df[df["Name"].isin(keep_names)]
-        df = df[["Name", "Last"]].rename(columns={"Last": "Yield"})
-        df = df.dropna()
+        df = df[["Name", "Last"]]
+
+        df = df.rename(columns={"Last": "Yield"})
 
         return df.reset_index(drop=True)
 
     except Exception:
         return pd.DataFrame()
-
 
 def display_market_metrics(df, n_cols=4):
 

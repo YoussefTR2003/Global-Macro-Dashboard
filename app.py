@@ -192,6 +192,7 @@ def get_major_10y_yields_fred():
         "UK 10Y": "IRLTLT01GBM156N",
         "Japan 10Y": "IRLTLT01JPM156N",
         "Canada 10Y": "IRLTLT01CAM156N",
+        "Spain": "IRLTLT01ESM156N",
     }
 
     rows = []

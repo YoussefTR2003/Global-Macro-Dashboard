@@ -207,6 +207,13 @@ def get_france_10y():
     except Exception as e:
         st.error(f"France 10Y error: {e}")
         return None
+
+
+def display_market_metrics(df, n_cols=4):
+    if df.empty:
+        st.warning("No data available.")
+        return
+
     cols = st.columns(n_cols)
 
     for i, row in df.iterrows():
@@ -215,8 +222,6 @@ def get_france_10y():
             value=row["Last"],
             delta=f"{row['Daily Change %']}%"
         )
-
-
 def get_market_news():
 
     try:

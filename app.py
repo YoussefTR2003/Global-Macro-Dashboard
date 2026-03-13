@@ -502,20 +502,40 @@ with col_com:
 # =========================================================
 # 4) GOVERNMENT RATES
 # =========================================================
-st.header("4) Government Rates")
+@st.cache_data(ttl=1800)
+def get_government_rates():
 
-gov_rates_df = get_government_rates()
+    countries = {
+        "US 10Y": "united states",
+        "Germany Bund 10Y": "germany",
+        "France OAT 10Y": "france",
+        "Italy BTP 10Y": "italy",
+        "UK Gilt 10Y": "united kingdom",
+        "Japan 10Y": "japan"
+    }
 
-if not gov_rates_df.empty:
-    cols = st.columns(3)
+    rows = []
 
-    for i, row in gov_rates_df.iterrows():
-        cols[i % 3].metric(
-            label=row["Name"],
-            value=f"{row['Last']}%"
-        )
-else:
-    st.warning("No government rate data available.")
+    for name, country in countries.items():
+        try:
+            url = f"https://api.tradingeconomics.com/markets/bond/{country}?c=guest:guest&format=json"
+            r = requests.get(url, timeout=10)
+            data = r.json()
+
+            if not data:
+                continue
+
+            value = data[0]["Last"]
+
+            rows.append({
+                "Name": name,
+                "Last": round(value,2)
+            })
+
+        except Exception:
+            continue
+
+    return pd.DataFrame(rows)
 
 
 

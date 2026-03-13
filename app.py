@@ -219,15 +219,10 @@ def get_major_10y_yields():
             ]
 
             if not bond.empty:
-                last_val = bond.iloc[0].get("Last", None)
-                chg_val = bond.iloc[0].get("Chg", None)
-
-                if last_val is not None:
-                    rows.append({
-                        "Name": f"{country} 10Y",
-                        "Last": round(float(last_val), 3),
-                        "Daily Change %": round(float(chg_val), 3) if chg_val is not None else None
-                    })
+                rows.append({
+                    "Name": f"{country} 10Y",
+                    "Yield": round(float(bond.iloc[0]["Last"]), 3)
+                })
 
         return pd.DataFrame(rows)
 
@@ -405,12 +400,21 @@ with col2:
 st.header("4) Government Rates")
 
 rates_df = get_major_10y_yields()
-display_market_metrics(rates_df, n_cols=4, is_yield=True)
 
-if show_tables:
-    with st.expander("See government rates table"):
-        st.dataframe(rates_df, width="stretch")
+if not rates_df.empty:
+    cols = st.columns(4)
 
+    for i, row in rates_df.iterrows():
+        cols[i % 4].metric(
+            label=row["Name"],
+            value=f"{row['Yield']}%"
+        )
+
+    if show_tables:
+        with st.expander("See government rates table"):
+            st.dataframe(rates_df, width="stretch")
+else:
+    st.warning("No government rate data available.")
 
 # =========================================================
 # 5) MARKET SENTIMENT

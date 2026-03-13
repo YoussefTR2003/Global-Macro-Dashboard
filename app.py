@@ -189,54 +189,24 @@ def get_market_snapshot(tickers_dict):
 
 
 @st.cache_data(ttl=1800)
-def get_government_rates():
+def get_france_10y():
     try:
         te_key = st.secrets.get("TE_API_KEY", "guest:guest")
-        te.login(te_key)
+        url = "https://api.tradingeconomics.com/markets/bond/france"
+        params = {"c": te_key, "f": "json"}
 
-        data = te.getMarketsData(marketsField="bond")
-        df = pd.DataFrame(data)
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
 
-        if df.empty:
-            return pd.DataFrame()
+        if not data:
+            return None
 
-        # debug once if needed
-        # st.dataframe(df.head(30), use_container_width=True)
-
-        df["Name"] = df["Name"].astype(str)
-
-        keep_countries = [
-            "United States",
-            "Germany",
-            "France",
-            "Italy",
-            "United Kingdom",
-            "Japan"
-        ]
-
-        mask_country = df["Name"].str.contains("|".join(keep_countries), case=False, na=False)
-        mask_10y = df["Name"].str.contains("10", case=False, na=False) | df["Symbol"].astype(str).str.contains("10Y", case=False, na=False)
-
-        df = df[mask_country & mask_10y]
-
-        if df.empty:
-            return pd.DataFrame()
-
-        df = df[["Name", "Last"]].rename(columns={"Last": "Yield"})
-        df = df.dropna()
-        df = df.reset_index(drop=True)
-
-        return df
+        return round(float(data[0]["Last"]), 3)
 
     except Exception as e:
-        st.error(f"Government rates error: {e}")
-        return pd.DataFrame()
-def display_market_metrics(df, n_cols=4):
-
-    if df.empty:
-        st.warning("No data available.")
-        return
-
+        st.error(f"France 10Y error: {e}")
+        return None
     cols = st.columns(n_cols)
 
     for i, row in df.iterrows():
@@ -371,25 +341,14 @@ with col2:
 # =========================================================
 # 4 GOVERNMENT RATES
 # =========================================================
-
 st.header("4) Government Rates")
 
-gov_rates_df = get_government_rates()
+france_10y = get_france_10y()
 
-if not gov_rates_df.empty:
-    cols = st.columns(3)
-
-    for i, row in gov_rates_df.iterrows():
-        cols[i % 3].metric(
-            label=row["Name"],
-            value=f"{row['Yield']}%"
-        )
-
-    if show_tables:
-        with st.expander("See government rates table"):
-            st.dataframe(gov_rates_df, use_container_width="stretch")
+if france_10y is not None:
+    st.metric("France 10Y OAT", f"{france_10y}%")
 else:
-    st.warning("No government rate data available.")
+    st.warning("France 10Y yield unavailable.")
 
 # =========================================================
 # 5 MARKET SENTIMENT

@@ -305,15 +305,18 @@ with metric_col:
     )
 
 with chart_col:
+    plot_df = macro_df[[selected_macro]].dropna().reset_index()
+    plot_df.columns = ["Date", "Value"]
 
     fig = px.line(
-        macro_df.reset_index(),
-        x="DATE",
-        y=selected_macro
+        plot_df,
+        x="Date",
+        y="Value",
+        title=f"{selected_macro} over time"
     )
 
+    fig.update_layout(margin=dict(l=20, r=20, t=50, b=20))
     st.plotly_chart(fig, use_container_width=True)
-
 
 # =========================================================
 # 2 EQUITIES

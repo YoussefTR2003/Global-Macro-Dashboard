@@ -402,17 +402,23 @@ with col2:
 
 st.header("4) Government Rates")
 
-rates_df = get_major_10y_yields()
+bond_df = get_bond_dataframe()
+
+rates_df = extract_major_10y(bond_df)
 
 if not rates_df.empty:
+
     cols = st.columns(4)
+
     for i, row in rates_df.iterrows():
+
         cols[i % 4].metric(
             label=row["Name"],
             value=f"{row['Yield']}%"
         )
+
 else:
-    st.warning("No government rate data available.")
+    st.warning("No bond data available.")
 
 # =========================================================
 # 5) MARKET SENTIMENT

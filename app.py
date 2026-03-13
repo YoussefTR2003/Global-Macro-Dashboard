@@ -334,6 +334,13 @@ commodities_tickers = {
     "Copper": "HG=F",
     "Natural Gas": "NG=F"
 }
+government_rates = {
+    "GILT 10Y": "GB10Y",
+    "US 10Y": "US10Y",
+    "Bund 10Y": "DE10Y",
+    "OAT 10Y": "FR10Y",
+    "BTP 10Y": "IT10Y"
+}
 
 # =========================================================
 # 1) MACRO DATA
@@ -437,6 +444,7 @@ with tab_asia:
     if show_tables:
         with st.expander("See Asian stocks table"):
             st.dataframe(asia_stocks_df, use_container_width=True)
+    
 # =========================================================
 # 3) FX & COMMODITIES
 # =========================================================
@@ -464,15 +472,22 @@ with col_com:
 
 
 # =========================================================
-# IMPORTANT NEWS
+# 4) GOVERNMENT RATES
+# =========================================================
+st.header("4) Government Rates")
+gov_rates_df = get_market_snapshot(government_rates)
+display_market_metrics(gov_rates_df, n_cols=2)  
+if show_tables:
+    with st.expander("See government rates table"):
+        st.dataframe(gov_rates_df, use_container_width=True)
+
+
 
 # =========================================================
-
-# =========================================================
-# 4) MARKET SENTIMENT
+# 5) MARKET SENTIMENT
 # =========================================================
 
-st.header("4) Market Sentiment")
+st.header("5) Market Sentiment")
 
 score = 0
 

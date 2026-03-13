@@ -193,7 +193,7 @@ def get_france_10y():
     try:
         te.login(st.secrets["TE_API_KEY"])
 
-        df = te.getMarketsData(marketsField="BOND", output_type="df")
+        df = te.getMarketsData(marketsField="bond", output_type="df")
 
         if df is None or len(df) == 0:
             return None

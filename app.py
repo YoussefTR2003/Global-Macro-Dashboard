@@ -174,6 +174,31 @@ def get_market_snapshot(tickers_dict):
         df = df.sort_values("Daily Change %", ascending=False).reset_index(drop=True)
 
     return df
+@st.cache_data(ttl=1800)
+def get_government_rates():
+    
+    rows = []
+    
+    for name, country in government_rates.items():
+        try:
+            url = f"https://api.tradingeconomics.com/{country}?c=guest:guest&format=json"
+            r = requests.get(url)
+            data = r.json()
+
+            if len(data) == 0:
+                continue
+
+            value = data[0]["Last"]
+
+            rows.append({
+                "Name": name,
+                "Last": round(value,2)
+            })
+
+        except Exception:
+            continue
+
+    return pd.DataFrame(rows)
 
 
 @st.cache_data(ttl=1800)
@@ -335,12 +360,15 @@ commodities_tickers = {
     "Natural Gas": "NG=F"
 }
 government_rates = {
-    "GILT 10Y": "GB10Y",
-    "US 10Y": "US10Y",
-    "Bund 10Y": "DE10Y",
-    "OAT 10Y": "FR10Y",
-    "BTP 10Y": "IT10Y"
+    "US 10Y": "united states/government-bond-yield",
+    "Germany 10Y Bund": "germany/government-bond-yield",
+    "France 10Y OAT": "france/government-bond-yield",
+    "Italy 10Y BTP": "italy/government-bond-yield",
+    "UK 10Y Gilt": "united kingdom/government-bond-yield",
+    "Japan 10Y": "japan/government-bond-yield"
 }
+
+
 
 # =========================================================
 # 1) MACRO DATA
@@ -475,11 +503,19 @@ with col_com:
 # 4) GOVERNMENT RATES
 # =========================================================
 st.header("4) Government Rates")
-gov_rates_df = get_market_snapshot(government_rates)
-display_market_metrics(gov_rates_df, n_cols=2)  
-if show_tables:
-    with st.expander("See government rates table"):
-        st.dataframe(gov_rates_df, use_container_width=True)
+
+gov_rates_df = get_government_rates()
+
+if not gov_rates_df.empty:
+    cols = st.columns(3)
+
+    for i, row in gov_rates_df.iterrows():
+        cols[i % 3].metric(
+            label=row["Name"],
+            value=f"{row['Last']}%"
+        )
+else:
+    st.warning("No government rate data available.")
 
 
 

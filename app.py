@@ -318,8 +318,8 @@ with chart_col:
     
     def display_market_metrics(df, n_cols=4):
         if df.empty:
-        st.warning("No data available.")
-        return
+            st.warning("No data available.")
+            return
 
     cols = st.columns(n_cols)
 

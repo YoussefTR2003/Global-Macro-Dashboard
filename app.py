@@ -183,52 +183,35 @@ def get_market_snapshot(tickers_dict):
 
 
 @st.cache_data(ttl=1800)
-def get_bond_dataframe():
-
-    try:
-        te.login(st.secrets.get("TE_API_KEY", "guest:guest"))
-
-        df = te.getMarketsData(marketsField="bond", output_type="df")
-
-        if df is None:
-            return pd.DataFrame()
-
-        return df
-
-    except Exception:
-        return pd.DataFrame()
-
-def extract_major_10y(df):
-
-    if df.empty:
-        return pd.DataFrame()
-
-    targets = {
-        "United States": "US 10Y",
-        "Germany": "Germany 10Y",
-        "France": "France 10Y",
-        "United Kingdom": "UK 10Y",
-        "Japan": "Japan 10Y",
-        "Italy": "Italy 10Y",
-        "Spain": "Spain 10Y",
-        "Canada": "Canada 10Y"
+def get_major_10y_yields_fred():
+    series_map = {
+        "US 10Y": "IRLTLT01USM156N",
+        "Germany 10Y": "IRLTLT01DEM156N",
+        "France 10Y": "IRLTLT01FRM156N",
+        "Italy 10Y": "IRLTLT01ITM156N",
+        "UK 10Y": "IRLTLT01GBM156N",
+        "Japan 10Y": "IRLTLT01JPM156N",
+        "Canada 10Y": "IRLTLT01CAM156N",
     }
 
     rows = []
 
-    for country, label in targets.items():
+    for label, series_id in series_map.items():
+        try:
+            s = fred.get_series(series_id).dropna()
+            if len(s) == 0:
+                continue
 
-        bond = df[
-            df["Name"].str.contains(country, case=False, na=False) &
-            df["Name"].str.contains("10", case=False, na=False)
-        ]
-
-        if not bond.empty:
+            last_val = float(s.iloc[-1])
+            prev_val = float(s.iloc[-2]) if len(s) >= 2 else None
 
             rows.append({
                 "Name": label,
-                "Yield": round(float(bond.iloc[0]["Last"]), 3)
+                "Yield": round(last_val, 3),
+                "Delta": round(last_val - prev_val, 3) if prev_val is not None else None
             })
+        except Exception:
+            continue
 
     return pd.DataFrame(rows)
 
@@ -399,27 +382,27 @@ with col2:
 # =========================================================
 # 4) GOVERNMENT RATES
 # =========================================================
-
 st.header("4) Government Rates")
 
-bond_df = get_bond_dataframe()
-
-rates_df = extract_major_10y(bond_df)
+rates_df = get_major_10y_yields_fred()
 
 if not rates_df.empty:
-
     cols = st.columns(4)
 
     for i, row in rates_df.iterrows():
+        delta_text = None if pd.isna(row["Delta"]) else f"{row['Delta']:+.3f}"
 
         cols[i % 4].metric(
             label=row["Name"],
-            value=f"{row['Yield']}%"
+            value=f"{row['Yield']:.3f}%",
+            delta=delta_text
         )
 
+    if show_tables:
+        with st.expander("See government rates table"):
+            st.dataframe(rates_df, width="stretch")
 else:
-    st.warning("No bond data available.")
-
+    st.warning("No government rate data available.")
 # =========================================================
 # 5) MARKET SENTIMENT
 # =========================================================

@@ -4,6 +4,8 @@ import yfinance as yf
 from fredapi import Fred
 import plotly.express as px
 import requests 
+import tradingeconomics as te
+
 
 # =========================================================
 # PAGE CONFIG
@@ -20,7 +22,10 @@ st.caption("Macro data, major equity indices, key stocks, and important market/g
 # FRED CONFIG
 # =========================================================
 fred = Fred(api_key=st.secrets["FRED_API_KEY"])
-
+# =========================================================
+# TRADING ECONOMICS CONFIG
+# =========================================================
+te.initialize(api_key=st.secrets["TRADING_ECONOMICS_API_KEY"])
 # =========================================================
 # SIDEBAR
 # =========================================================
@@ -268,7 +273,23 @@ def display_news(articles):
             st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
         else:
             st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
+@st.cache_data(ttl=1800)
+def get_government_rates():
 
+    import tradingeconomics as te
+    te.login(st.secrets["TE_API_KEY"])
+
+    data = te.getMarketsData(marketsField='bonds')
+
+    df = pd.DataFrame(data)
+
+    df = df[df["Symbol"].str.contains("10Y", na=False)]
+
+    df = df[["Name", "Last"]]
+
+    df = df.rename(columns={"Last": "Yield"})
+
+    return df.head(8)
 
 # =========================================================
 # TICKERS
@@ -502,40 +523,7 @@ with col_com:
 # =========================================================
 # 4) GOVERNMENT RATES
 # =========================================================
-@st.cache_data(ttl=1800)
-def get_government_rates():
 
-    countries = {
-        "US 10Y": "united states",
-        "Germany Bund 10Y": "germany",
-        "France OAT 10Y": "france",
-        "Italy BTP 10Y": "italy",
-        "UK Gilt 10Y": "united kingdom",
-        "Japan 10Y": "japan"
-    }
-
-    rows = []
-
-    for name, country in countries.items():
-        try:
-            url = f"https://api.tradingeconomics.com/markets/bond/{country}?c=guest:guest&format=json"
-            r = requests.get(url, timeout=10)
-            data = r.json()
-
-            if not data:
-                continue
-
-            value = data[0]["Last"]
-
-            rows.append({
-                "Name": name,
-                "Last": round(value,2)
-            })
-
-        except Exception:
-            continue
-
-    return pd.DataFrame(rows)
 
 
 
@@ -583,6 +571,17 @@ st.markdown(
     f"<h2 style='color:{color}; text-align:center'>{sentiment}</h2>",
     unsafe_allow_html=True
 )
+st.header("4) Government Rates")
+
+gov_rates_df = get_government_rates()
+
+cols = st.columns(4)
+
+for i, row in gov_rates_df.iterrows():
+    cols[i % 4].metric(
+        label=row["Name"],
+        value=f"{row['Yield']}%"
+    )
 
 
         

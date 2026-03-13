@@ -185,16 +185,12 @@ def get_market_snapshot(tickers_dict):
 @st.cache_data(ttl=1800)
 def get_major_10y_yields():
     try:
-        te_key = st.secrets.get("TE_API_KEY", "guest:guest")
-        te.login(te_key)
+        te.login(st.secrets.get("TE_API_KEY", "guest:guest"))
 
-        df = te.getMarketsData(marketsField="bond", output_type="df")
+        df = te.getMarketsData(marketsField="bond", type="10Y", output_type="df")
 
-        if df is None or len(df) == 0:
+        if df is None or df.empty:
             return pd.DataFrame()
-
-        df["Name"] = df["Name"].astype(str)
-        df["Symbol"] = df["Symbol"].astype(str)
 
         countries = [
             "United States",
@@ -208,16 +204,8 @@ def get_major_10y_yields():
         ]
 
         rows = []
-
         for country in countries:
-            bond = df[
-                df["Name"].str.contains(country, case=False, na=False) &
-                (
-                    df["Name"].str.contains("10", case=False, na=False) |
-                    df["Symbol"].str.contains("10Y", case=False, na=False)
-                )
-            ]
-
+            bond = df[df["Name"].str.contains(country, case=False, na=False)]
             if not bond.empty:
                 rows.append({
                     "Name": f"{country} 10Y",

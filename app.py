@@ -3,13 +3,15 @@ import pandas as pd
 import yfinance as yf
 from fredapi import Fred
 import plotly.express as px
-import requests 
+import requests
 import tradingeconomics as te
+from newsapi import NewsApiClient
 
 
 # =========================================================
 # PAGE CONFIG
 # =========================================================
+
 st.set_page_config(
     page_title="Macro Pulse Dashboard",
     layout="wide"
@@ -18,19 +20,22 @@ st.set_page_config(
 st.title("Macro Pulse Dashboard")
 st.caption("Macro data, major equity indices, key stocks, and important market/geopolitical news")
 
+
 # =========================================================
-# FRED CONFIG
+# API CONFIG
 # =========================================================
+
 fred = Fred(api_key=st.secrets["FRED_API_KEY"])
-# =========================================================
-# TRADING ECONOMICS CONFIG
-# =========================================================
-te.initialize(api_key=st.secrets["TRADING_ECONOMICS_API_KEY"])
+newsapi = NewsApiClient(api_key=st.secrets["NEWSAPI_KEY"])
+
+
 # =========================================================
 # SIDEBAR
 # =========================================================
+
 @st.cache_data(ttl=3600)
 def get_fred_release_calendar():
+
     api_key = st.secrets["FRED_API_KEY"]
 
     releases_url = "https://api.stlouisfed.org/fred/releases"
@@ -42,6 +47,7 @@ def get_fred_release_calendar():
     }
 
     try:
+
         releases_resp = requests.get(releases_url, params=base_params, timeout=10)
         dates_resp = requests.get(
             dates_url,
@@ -58,7 +64,6 @@ def get_fred_release_calendar():
         if releases_df.empty or dates_df.empty:
             return pd.DataFrame()
 
-        # garde seulement les colonnes utiles
         releases_df = releases_df[["id", "name"]].rename(columns={"id": "release_id"})
         dates_df["release_id"] = pd.to_numeric(dates_df["release_id"], errors="coerce")
 
@@ -69,6 +74,7 @@ def get_fred_release_calendar():
 
     except Exception:
         return pd.DataFrame()
+
 
 st.sidebar.header("Dashboard Settings")
 
@@ -81,6 +87,7 @@ st.sidebar.subheader("Upcoming Economic Releases")
 calendar_df = get_fred_release_calendar()
 
 if not calendar_df.empty:
+
     today = pd.Timestamp.today().normalize()
 
     next_releases = (
@@ -90,13 +97,12 @@ if not calendar_df.empty:
         .head(5)
     )
 
-    if not next_releases.empty:
-        for _, row in next_releases.iterrows():
-            st.sidebar.write(f"• {row['date'].date()} — {row['name']}")
-    else:
-        st.sidebar.caption("No upcoming releases found.")
+    for _, row in next_releases.iterrows():
+        st.sidebar.write(f"• {row['date'].date()} — {row['name']}")
+
 else:
     st.sidebar.caption("Calendar unavailable.")
+
 
 macro_start_date = st.sidebar.date_input(
     "Macro start date",
@@ -112,17 +118,15 @@ selected_macro = st.sidebar.selectbox(
         "Fed Funds Rate",
         "US 10Y Yield"
     ]
-)       
+)
 
 show_tables = st.sidebar.checkbox("Show detailed tables", value=True)
 
 
-
-
-
 # =========================================================
-# HELPERS
+# DATA FUNCTIONS
 # =========================================================
+
 @st.cache_data(ttl=3600)
 def get_macro_data():
 
@@ -142,17 +146,20 @@ def get_macro_data():
 
     return macro
 
+
 @st.cache_data(ttl=1800)
 def get_market_snapshot(tickers_dict):
+
     rows = []
 
     for label, ticker in tickers_dict.items():
+
         try:
+
             hist = yf.download(
                 ticker,
                 period="5d",
                 interval="1d",
-                auto_adjust=False,
                 progress=False
             )
 
@@ -161,13 +168,13 @@ def get_market_snapshot(tickers_dict):
 
             last_close = float(hist["Close"].iloc[-1])
             prev_close = float(hist["Close"].iloc[-2])
-            daily_change_pct = ((last_close / prev_close) - 1) * 100
+
+            change = ((last_close / prev_close) - 1) * 100
 
             rows.append({
                 "Name": label,
-                "Ticker": ticker,
                 "Last": round(last_close, 2),
-                "Daily Change %": round(daily_change_pct, 2)
+                "Daily Change %": round(change, 2)
             })
 
         except Exception:
@@ -176,60 +183,35 @@ def get_market_snapshot(tickers_dict):
     df = pd.DataFrame(rows)
 
     if not df.empty:
-        df = df.sort_values("Daily Change %", ascending=False).reset_index(drop=True)
+        df = df.sort_values("Daily Change %", ascending=False)
 
     return df
+
+
 @st.cache_data(ttl=1800)
 def get_government_rates():
-    
-    rows = []
-    
-    for name, country in government_rates.items():
-        try:
-            url = f"https://api.tradingeconomics.com/{country}?c=guest:guest&format=json"
-            r = requests.get(url)
-            data = r.json()
 
-            if len(data) == 0:
-                continue
+    te.login(st.secrets["TE_API_KEY"])
 
-            value = data[0]["Last"]
+    data = te.getMarketsData(marketsField="bonds")
 
-            rows.append({
-                "Name": name,
-                "Last": round(value,2)
-            })
+    df = pd.DataFrame(data)
 
-        except Exception:
-            continue
+    if df.empty:
+        return df
 
-    return pd.DataFrame(rows)
+    df = df[df["Symbol"].str.contains("10Y", na=False)]
 
+    df = df[["Name", "Last"]]
+    df = df.rename(columns={"Last": "Yield"})
 
-@st.cache_data(ttl=1800)
-def get_news_for_ticker(ticker):
-    try:
-        tk = yf.Ticker(ticker)
-        news = tk.get_news()
-        return news if news else []
-    except Exception:
-        return []
-
-
-def is_geopolitical(title):
-    keywords = [
-        "iran", "israel", "war", "military", "missile", "conflict",
-        "sanctions", "oil", "strait", "hormuz", "middle east", "attack",
-        "ceasefire", "russia", "ukraine", "china", "taiwan", "tariff",
-        "geopolitical", "troops", "bomb", "strike"
-    ]
-    title_lower = title.lower()
-    return any(word in title_lower for word in keywords)
+    return df.head(8)
 
 
 def display_market_metrics(df, n_cols=4):
+
     if df.empty:
-        st.warning("No market data available.")
+        st.warning("No data available.")
         return
 
     cols = st.columns(n_cols)
@@ -237,63 +219,47 @@ def display_market_metrics(df, n_cols=4):
     for i, row in df.iterrows():
         cols[i % n_cols].metric(
             label=row["Name"],
-            value=f'{row["Last"]}',
-            delta=f'{row["Daily Change %"]}%'
+            value=row["Last"],
+            delta=f"{row['Daily Change %']}%"
         )
 
-from newsapi import NewsApiClient
 
-newsapi = NewsApiClient(api_key=st.secrets.get("NEWSAPI_KEY"))
+def get_market_news():
 
-def get_market_news(max_items=10):
     try:
+
         response = newsapi.get_top_headlines(
             category="business",
             language="en",
-            page_size=max_items
+            page_size=10
         )
+
         return response.get("articles", [])
-    except Exception as e:
-        st.warning(f"News API error: {e}")
+
+    except:
         return []
 
 
 def display_news(articles):
+
     if not articles:
         st.warning("No news retrieved.")
         return
 
     for article in articles:
-        title = article.get("title", "No title")
-        url = article.get("url", "#")
-        source = article.get("source", {}).get("name", "Unknown source")
+
+        title = article.get("title")
+        url = article.get("url")
+        source = article.get("source", {}).get("name", "")
         date = article.get("publishedAt", "")
 
-        if is_geopolitical(title):
-            st.markdown(f"🔴 **[{title}]({url})**  \n{source} — {date}")
-        else:
-            st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
-@st.cache_data(ttl=1800)
-def get_government_rates():
+        st.markdown(f"• **[{title}]({url})**  \n{source} — {date}")
 
-    import tradingeconomics as te
-    te.login(st.secrets["TE_API_KEY"])
-
-    data = te.getMarketsData(marketsField='bonds')
-
-    df = pd.DataFrame(data)
-
-    df = df[df["Symbol"].str.contains("10Y", na=False)]
-
-    df = df[["Name", "Last"]]
-
-    df = df.rename(columns={"Last": "Yield"})
-
-    return df.head(8)
 
 # =========================================================
 # TICKERS
 # =========================================================
+
 us_indices = {
     "S&P 500": "^GSPC",
     "Nasdaq 100": "^NDX",
@@ -302,233 +268,102 @@ us_indices = {
     "VIX": "^VIX"
 }
 
-us_stocks = {
-    "Apple": "AAPL",
-    "Microsoft": "MSFT",
-    "Nvidia": "NVDA",
-    "Amazon": "AMZN",
-    "Google": "GOOGL",
-    "Meta": "META",
-    "Tesla": "TSLA",
-    "JPMorgan": "JPM",
-    "Goldman Sachs": "GS",
-    "Morgan Stanley": "MS",
-    "Bank of America": "BAC",
-    "BlackRock": "BLK"
-}
-
-eu_indices = {
-    "Euro Stoxx 50": "^STOXX50E",
-    "STOXX 600": "^STOXX",
-    "CAC 40": "^FCHI",
-    "DAX": "^GDAXI",
-    "FTSE 100": "^FTSE",
-    "IBEX 35": "^IBEX",
-    "SMI": "^SSMI",
-    "FTSE MIB": "FTSEMIB.MI"
-}
-
-eu_stocks = {
-    "LVMH": "MC.PA",
-    "Hermes": "RMS.PA",
-    "Airbus": "AIR.PA",
-    "ASML": "ASML.AS",
-    "SAP": "SAP.DE",
-    "Siemens": "SIE.DE",
-    "Nestle": "NESN.SW",
-    "Roche": "ROG.SW",
-    "Shell": "SHEL.L",
-    "TotalEnergies": "TTE.PA",
-    "Novo Nordisk": "NOVO-B.CO"
-}
-
-asia_indices = {
-    "Nikkei 225": "^N225",
-    "TOPIX": "^TOPX",
-    "Hang Seng": "^HSI",
-    "Shanghai Composite": "000001.SS",
-    "Shenzhen": "399001.SZ",
-    "CSI 300": "000300.SS",
-    "KOSPI": "^KS11",
-    "ASX 200": "^AXJO"
-}
-
-asia_stocks = {
-    "Toyota": "7203.T",
-    "Sony": "6758.T",
-    "SoftBank": "9984.T",
-    "Alibaba": "9988.HK",
-    "Tencent": "0700.HK",
-    "Samsung Elec": "005930.KS",
-    "TSMC": "2330.TW",
-    "BYD": "1211.HK"
-}
 fx_tickers = {
     "EUR/USD": "EURUSD=X",
     "USD/JPY": "JPY=X",
     "GBP/USD": "GBPUSD=X",
-    "USD/CHF": "CHF=X",
-    "AUD/USD": "AUDUSD=X",
-    "USD/CNH": "CNH=X"
+    "USD/CHF": "CHF=X"
 }
 
 commodities_tickers = {
     "Gold": "GC=F",
-    "Silver": "SI=F",
     "Brent": "BZ=F",
     "WTI": "CL=F",
-    "Copper": "HG=F",
-    "Natural Gas": "NG=F"
-}
-government_rates = {
-    "US 10Y": "united states/government-bond-yield",
-    "Germany 10Y Bund": "germany/government-bond-yield",
-    "France 10Y OAT": "france/government-bond-yield",
-    "Italy 10Y BTP": "italy/government-bond-yield",
-    "UK 10Y Gilt": "united kingdom/government-bond-yield",
-    "Japan 10Y": "japan/government-bond-yield"
+    "Copper": "HG=F"
 }
 
 
+# =========================================================
+# 1 MACRO DATA
+# =========================================================
 
-# =========================================================
-# 1) MACRO DATA
-# =========================================================
 st.header("1) Macro Data")
 
 macro_df = get_macro_data()
-macro_df = macro_df.loc[str(macro_start_date):].copy()
+macro_df = macro_df.loc[str(macro_start_date):]
 
-metric_col, chart_col = st.columns([1, 2])
+metric_col, chart_col = st.columns([1,2])
 
 with metric_col:
-    st.subheader("Latest Macro Snapshot")
 
-    latest_series = macro_df[selected_macro].dropna()
-    latest_value = latest_series.iloc[-1]
-    previous_value = latest_series.iloc[-2]
-
-    delta_pct = ((latest_value / previous_value) - 1) * 100 if previous_value != 0 else 0
+    latest = macro_df[selected_macro].dropna()
 
     st.metric(
-        label=selected_macro,
-        value=f"{latest_value:.2f}",
-        delta=f"{delta_pct:.2f}%"
+        selected_macro,
+        round(latest.iloc[-1],2),
+        round(((latest.iloc[-1]/latest.iloc[-2])-1)*100,2)
     )
-
-    if show_tables:
-        with st.expander("See latest macro table"):
-            st.dataframe(macro_df.tail(18), use_container_width=True)
 
 with chart_col:
-    st.subheader(f"{selected_macro} Evolution")
-
-    plot_df = macro_df[[selected_macro]].dropna().reset_index()
-    plot_df.columns = ["Date", "Value"]
 
     fig = px.line(
-        plot_df,
-        x="Date",
-        y="Value",
-        title=f"{selected_macro} over time"
+        macro_df.reset_index(),
+        x="DATE",
+        y=selected_macro
     )
-    fig.update_layout(margin=dict(l=20, r=20, t=50, b=20))
+
     st.plotly_chart(fig, use_container_width=True)
 
 
 # =========================================================
-# 2) EQUITIES & INDICES
+# 2 EQUITIES
 # =========================================================
-st.header("2) Equities & Major Indices")
 
-tab_us, tab_eu, tab_asia = st.tabs(["US", "Europe", "Asia"])
+st.header("2) Major Equity Indices")
 
-with tab_us:
-    st.subheader("US Major Indices")
-    us_indices_df = get_market_snapshot(us_indices)
-    display_market_metrics(us_indices_df, n_cols=4)
+us_indices_df = get_market_snapshot(us_indices)
+display_market_metrics(us_indices_df)
 
-    if show_tables:
-        with st.expander("See US indices table"):
-            st.dataframe(us_indices_df, use_container_width=True)
 
-    st.subheader("US Major Stocks")
-    us_stocks_df = get_market_snapshot(us_stocks)
-    display_market_metrics(us_stocks_df, n_cols=4)
-
-    if show_tables:
-        with st.expander("See US stocks table"):
-            st.dataframe(us_stocks_df, use_container_width=True)
-
-with tab_eu:
-    st.subheader("European Major Indices")
-    eu_indices_df = get_market_snapshot(eu_indices)
-    display_market_metrics(eu_indices_df, n_cols=4)
-
-    if show_tables:
-        with st.expander("See European indices table"):
-            st.dataframe(eu_indices_df, use_container_width=True)
-
-    st.subheader("European Major Stocks")
-    eu_stocks_df = get_market_snapshot(eu_stocks)
-    display_market_metrics(eu_stocks_df, n_cols=4)
-
-    if show_tables:
-        with st.expander("See European stocks table"):
-            st.dataframe(eu_stocks_df, use_container_width=True)
-
-with tab_asia:
-    st.subheader("Asian Major Indices")
-    asia_indices_df = get_market_snapshot(asia_indices)
-    display_market_metrics(asia_indices_df, n_cols=4)
-
-    if show_tables:
-        with st.expander("See Asian indices table"):
-            st.dataframe(asia_indices_df, use_container_width=True)
-
-    st.subheader("Asian Major Stocks")
-    asia_stocks_df = get_market_snapshot(asia_stocks)
-    display_market_metrics(asia_stocks_df, n_cols=4)
-
-    if show_tables:
-        with st.expander("See Asian stocks table"):
-            st.dataframe(asia_stocks_df, use_container_width=True)
-    
 # =========================================================
-# 3) FX & COMMODITIES
+# 3 FX & COMMODITIES
 # =========================================================
+
 st.header("3) FX & Commodities")
 
-col_fx, col_com = st.columns(2)
+col1,col2 = st.columns(2)
 
-with col_fx:
-    st.subheader("FX")
+with col1:
     fx_df = get_market_snapshot(fx_tickers)
-    display_market_metrics(fx_df, n_cols=2)
+    display_market_metrics(fx_df,2)
 
-    if show_tables:
-        with st.expander("See FX table"):
-            st.dataframe(fx_df, use_container_width=True)
-
-with col_com:
-    st.subheader("Commodities")
-    commodities_df = get_market_snapshot(commodities_tickers)
-    display_market_metrics(commodities_df, n_cols=2)
-
-    if show_tables:
-        with st.expander("See commodities table"):
-            st.dataframe(commodities_df, use_container_width=True)
+with col2:
+    com_df = get_market_snapshot(commodities_tickers)
+    display_market_metrics(com_df,2)
 
 
 # =========================================================
-# 4) GOVERNMENT RATES
+# 4 GOVERNMENT RATES
 # =========================================================
 
+st.header("4) Government Rates")
 
+rates_df = get_government_rates()
+
+if not rates_df.empty:
+
+    cols = st.columns(4)
+
+    for i,row in rates_df.iterrows():
+
+        cols[i%4].metric(
+            row["Name"],
+            f"{row['Yield']}%"
+        )
 
 
 # =========================================================
-# 5) MARKET SENTIMENT
+# 5 MARKET SENTIMENT
 # =========================================================
 
 st.header("5) Market Sentiment")
@@ -537,8 +372,6 @@ score = 0
 
 spx = us_indices_df.loc[us_indices_df["Name"]=="S&P 500","Daily Change %"].values
 vix = us_indices_df.loc[us_indices_df["Name"]=="VIX","Daily Change %"].values
-gold = commodities_df.loc[commodities_df["Name"]=="Gold","Daily Change %"].values
-brent = commodities_df.loc[commodities_df["Name"]=="Brent","Daily Change %"].values
 
 if len(spx)>0 and spx[0] > 0:
     score += 1
@@ -550,44 +383,23 @@ if len(vix)>0 and vix[0] > 0:
 else:
     score += 1
 
-if len(gold)>0 and gold[0] > 0.5:
-    score -= 1
 
-if len(brent)>0 and brent[0] > 1:
-    score -= 1
-
-
-if score >= 2:
+if score >= 1:
     sentiment = "RISK ON"
-    color = "green"
 elif score <= -1:
     sentiment = "RISK OFF"
-    color = "red"
 else:
     sentiment = "NEUTRAL"
-    color = "orange"
 
-st.markdown(
-    f"<h2 style='color:{color}; text-align:center'>{sentiment}</h2>",
-    unsafe_allow_html=True
-)
-st.header("4) Government Rates")
-
-gov_rates_df = get_government_rates()
-
-cols = st.columns(4)
-
-for i, row in gov_rates_df.iterrows():
-    cols[i % 4].metric(
-        label=row["Name"],
-        value=f"{row['Yield']}%"
-    )
+st.metric("Market Sentiment Score",score)
+st.write(f"Market regime: **{sentiment}**")
 
 
-        
-st.metric("Market Sentiment Score", score)
-st.header("5) Important News")
+# =========================================================
+# 6 NEWS
+# =========================================================
+
+st.header("6) Important News")
 
 articles = get_market_news()
-
 display_news(articles)

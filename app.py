@@ -308,14 +308,21 @@ fx_tickers = {
     "EUR/USD": "EURUSD=X",
     "USD/JPY": "JPY=X",
     "GBP/USD": "GBPUSD=X",
-    "USD/CHF": "CHF=X"
+    "USD/CHF": "CHF=X",
+    "AUD/USD": "AUDUSD=X",
+    "USD/CAD": "CAD=X",
+    "NZD/USD": "NZDUSD=X",
+    "USD/CNH": "CNH=X"
 }
 
 commodities_tickers = {
     "Gold": "GC=F",
-    "Brent": "BZ=F",
-    "WTI": "CL=F",
-    "Copper": "HG=F"
+    "Silver": "SI=F",
+    "Brent Crude": "BZ=F",
+    "WTI Crude": "CL=F",
+    "Copper": "HG=F",
+    "Natural Gas": "NG=F",
+    "Platinum": "PL=F"
 }
 crypto_tickers = {
     "Bitcoin": "BTC-USD",

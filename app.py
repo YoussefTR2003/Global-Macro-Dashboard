@@ -291,6 +291,18 @@ eu_indices = {
     "FTSE MIB": "FTSEMIB.MI",
     "SMI (Switzerland)": "^SSMI",
 }
+asian_indices = {
+    "Nikkei 225": "^N225",
+    "TOPIX": "^TOPX",
+    "Hang Seng": "^HSI",
+    "Shanghai Composite": "000001.SS",
+    "Shenzhen Composite": "399001.SZ",
+    "CSI 300": "000300.SS",
+    "KOSPI": "^KS11",
+    "ASX 200": "^AXJO",
+    "Nifty 50": "^NSEI",
+    "Sensex": "^BSESN"
+}
 
 fx_tickers = {
     "EUR/USD": "EURUSD=X",
@@ -353,16 +365,30 @@ with chart_col:
 # =========================================================
 # 2) EQUITIES
 # =========================================================
+# =========================================================
+# 2) EQUITIES
+# =========================================================
 
 st.header("2) Major Equity Indices")
 
-us_indices_df = get_market_snapshot(us_indices)
-display_market_metrics(us_indices_df, n_cols=4, is_yield=False)
+selected_region = st.radio(
+    "Choose region",
+    ["US", "Europe", "Asia"],
+    horizontal=True
+)
+
+if selected_region == "US":
+    indices_df = get_market_snapshot(us_indices)
+elif selected_region == "Europe":
+    indices_df = get_market_snapshot(eu_indices)
+else:
+    indices_df = get_market_snapshot(asian_indices)
+
+display_market_metrics(indices_df, n_cols=4, is_yield=False)
 
 if show_tables:
-    with st.expander("See equity indices table"):
-        st.dataframe(us_indices_df, width="stretch")
-
+    with st.expander(f"See {selected_region} equity indices table"):
+        st.dataframe(indices_df, width="stretch")
 
 # =========================================================
 # 3) FX & COMMODITIES

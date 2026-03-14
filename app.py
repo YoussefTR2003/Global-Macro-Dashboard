@@ -454,7 +454,8 @@ with col2:
 
     if show_tables:
         with st.expander("See commodities table"):
-            st.dataframe(com_df, width="stretch")\st.header("FX Correlation Heatmap")
+            st.dataframe(com_df, width="stretch")
+st.header("FX Correlation Heatmap")
 
 fx_corr = get_fx_correlation_matrix(fx_tickers, period="6mo")
 

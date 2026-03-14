@@ -279,6 +279,17 @@ us_indices = {
     "Dow Jones": "^DJI",
     "Russell 2000": "^RUT",
     "VIX": "^VIX"
+
+}
+eu_indices = {
+    "Euro Stoxx 50": "^STOXX50E",
+    "STOXX Europe 600": "^STOXX",
+    "CAC 40": "^FCHI",
+    "DAX": "^GDAXI",
+    "FTSE 100": "^FTSE",
+    "IBEX 35": "^IBEX",
+    "FTSE MIB": "FTSEMIB.MI",
+    "SMI (Switzerland)": "^SSMI",
 }
 
 fx_tickers = {

@@ -470,16 +470,15 @@ else:
 # =========================================================
 # 5) MARKET SENTIMENT
 # =========================================================
-
 st.header("6) Market Sentiment")
 
 score = 0
 
 # Extract market moves
-spx = us_indices_df.loc[indices_df["Name"] == "S&P 500", "Daily Change %"].values
-vix = us_indices_df.loc[indices_df["Name"] == "VIX", "Daily Change %"].values
+spx = us_indices_df.loc[us_indices_df["Name"] == "S&P 500", "Daily Change %"].values
+vix = us_indices_df.loc[us_indices_df["Name"] == "VIX", "Daily Change %"].values
 gold = com_df.loc[com_df["Name"] == "Gold", "Daily Change %"].values
-brent = com_df.loc[com_df["Name"] == "Brent", "Daily Change %"].values
+brent = com_df.loc[com_df["Name"] == "Brent Crude", "Daily Change %"].values
 
 
 # Equity signal
@@ -517,7 +516,6 @@ else:
 
 st.metric("Market Sentiment Score", score)
 st.write(f"Market regime: **{sentiment}**")
-
 # =========================================================
 # 6) NEWS
 # =========================================================

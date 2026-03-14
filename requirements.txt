@@ -6,3 +6,4 @@ fredapi
 requests
 newsapi-python
 tradingeconomics
+plotly.express

@@ -381,6 +381,9 @@ with chart_col:
 
 st.header("2) Major Equity Indices")
 
+us_indices_df = get_market_snapshot(us_indices)
+display_market_metrics(us_indices_df, n_cols=4)
+
 selected_region = st.radio(
     "Choose region",
     ["US", "Europe", "Asia"],
@@ -404,8 +407,7 @@ if show_tables:
 # 3) FX & COMMODITIES
 # =========================================================
 
-st.header("3) FX & Commodities")
-
+com_df = get_market_snapshot(commodities_tickers)
 col1, col2 = st.columns(2)
 
 with col1:

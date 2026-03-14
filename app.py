@@ -317,7 +317,13 @@ commodities_tickers = {
     "WTI": "CL=F",
     "Copper": "HG=F"
 }
-
+crypto_tickers = {
+    "Bitcoin": "BTC-USD",
+    "Ethereum": "ETH-USD",
+    "Solana": "SOL-USD",
+    "BNB": "BNB-USD",
+    "XRP": "XRP-USD"
+}
 
 # =========================================================
 # 1) MACRO DATA
@@ -362,9 +368,6 @@ with chart_col:
     st.plotly_chart(fig, width="stretch")
 
 
-# =========================================================
-# 2) EQUITIES
-# =========================================================
 # =========================================================
 # 2) EQUITIES
 # =========================================================
@@ -418,9 +421,25 @@ with col2:
 
 
 # =========================================================
+# 4) CRYPTO
+# =========================================================
+
+
+st.header("4) Crypto Markets")
+
+crypto_df = get_market_snapshot(crypto_tickers)
+
+display_market_metrics(crypto_df, n_cols=4, is_yield=False)
+
+if show_tables:
+    with st.expander("See crypto table"):
+        st.dataframe(crypto_df, width="stretch")
+
+
+# =========================================================
 # 4) GOVERNMENT RATES
 # =========================================================
-st.header("4) Government Rates")
+st.header("5) Government Rates")
 
 rates_df = get_major_10y_yields_fred()
 
@@ -445,39 +464,58 @@ else:
 # 5) MARKET SENTIMENT
 # =========================================================
 
-st.header("5) Market Sentiment")
+st.header("6) Market Sentiment")
 
 score = 0
 
+# Extract market moves
 spx = us_indices_df.loc[us_indices_df["Name"] == "S&P 500", "Daily Change %"].values
 vix = us_indices_df.loc[us_indices_df["Name"] == "VIX", "Daily Change %"].values
+gold = com_df.loc[com_df["Name"] == "Gold", "Daily Change %"].values
+brent = com_df.loc[com_df["Name"] == "Brent", "Daily Change %"].values
 
+
+# Equity signal
 if len(spx) > 0 and spx[0] > 0:
     score += 1
 else:
     score -= 1
 
+
+# Volatility signal
 if len(vix) > 0 and vix[0] > 0:
     score -= 1
 else:
     score += 1
 
-if score >= 1:
+
+# Safe haven signal
+if len(gold) > 0 and gold[0] > 0.5:
+    score -= 1
+
+
+# Oil shock signal
+if len(brent) > 0 and brent[0] > 1:
+    score -= 1
+
+
+# Regime classification
+if score >= 2:
     sentiment = "RISK ON"
 elif score <= -1:
     sentiment = "RISK OFF"
 else:
     sentiment = "NEUTRAL"
 
+
 st.metric("Market Sentiment Score", score)
 st.write(f"Market regime: **{sentiment}**")
-
 
 # =========================================================
 # 6) NEWS
 # =========================================================
 
-st.header("6) Important News")
+st.header("7) Important News")
 
 articles = get_market_news()
 display_news(articles)

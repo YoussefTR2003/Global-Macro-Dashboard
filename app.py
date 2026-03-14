@@ -458,9 +458,16 @@ with col2:
             st.dataframe(com_df, width="stretch")
 st.header("FX Correlation Heatmap")
 
-fx_corr = get_fx_correlation_matrix(fx_tickers, period="6mo")
+corr_window = st.selectbox(
+    "Correlation window",
+    ["3mo", "6mo", "1y"],
+    index=1
+)
+
+fx_corr = get_fx_correlation_matrix(fx_tickers, period=corr_window)
 
 if not fx_corr.empty:
+
     fig = px.imshow(
         fx_corr,
         text_auto=".2f",
@@ -471,8 +478,12 @@ if not fx_corr.empty:
         title="FX Daily Return Correlation"
     )
 
-    fig.update_layout(margin=dict(l=20, r=20, t=50, b=20))
+    fig.update_layout(
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+
     st.plotly_chart(fig, width="stretch")
+
 else:
     st.warning("FX correlation data unavailable.")
 

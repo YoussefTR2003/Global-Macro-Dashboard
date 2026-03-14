@@ -127,33 +127,27 @@ show_tables = st.sidebar.checkbox("Show detailed tables", value=True)
 # =========================================================
 @st.cache_data(ttl=1800)
 def get_fx_correlation_matrix(fx_tickers, period="6mo"):
-    data = pd.DataFrame()
 
-    for label, ticker in fx_tickers.items():
-        try:
-            hist = yf.download(
-                ticker,
-                period=period,
-                interval="1d",
-                progress=False,
-                auto_adjust=False
-            )
+    prices = pd.DataFrame()
 
-            if hist.empty:
-                continue
+    for name, ticker in fx_tickers.items():
 
-            data[label] = hist["Close"]
+        data = yf.download(
+            ticker,
+            period=period,
+            interval="1d",
+            progress=False
+        )
 
-        except Exception:
-            continue
+        if not data.empty:
+            prices[name] = data["Close"]
 
-    if data.empty or data.shape[1] < 2:
+    if prices.shape[1] < 2:
         return pd.DataFrame()
 
-    returns = data.pct_change().dropna()
-    corr_matrix = returns.corr()
+    returns = prices.pct_change().dropna()
 
-    return corr_matrix
+    return returns.corr()
 @st.cache_data(ttl=3600)
 def get_macro_data():
     cpi = fred.get_series("CPIAUCSL").to_frame("CPI")
@@ -334,14 +328,12 @@ asian_indices = {
 }
 
 fx_tickers = {
-    "EUR/USD": "EURUSD=X",
-    "USD/JPY": "JPY=X",
-    "GBP/USD": "GBPUSD=X",
-    "USD/CHF": "CHF=X",
-    "AUD/USD": "AUDUSD=X",
-    "USD/CAD": "CAD=X",
-    "NZD/USD": "NZDUSD=X",
-    "USD/CNH": "CNH=X"
+    "EURUSD": "EURUSD=X",
+    "GBPUSD": "GBPUSD=X",
+    "USDJPY": "JPY=X",
+    "USDCHF": "CHF=X",
+    "AUDUSD": "AUDUSD=X",
+    "USDCAD": "CAD=X",
 }
 
 commodities_tickers = {
@@ -458,35 +450,23 @@ with col2:
             st.dataframe(com_df, width="stretch")
 st.header("FX Correlation Heatmap")
 
-corr_window = st.selectbox(
-    "Correlation window",
-    ["3mo", "6mo", "1y"],
-    index=1
-)
-
-fx_corr = get_fx_correlation_matrix(fx_tickers, period=corr_window)
+fx_corr = get_fx_correlation_matrix(fx_tickers)
 
 if not fx_corr.empty:
 
     fig = px.imshow(
         fx_corr,
-        text_auto=".2f",
-        aspect="auto",
+        text_auto=True,
         color_continuous_scale="RdBu_r",
         zmin=-1,
         zmax=1,
         title="FX Daily Return Correlation"
     )
 
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=50, b=20)
-    )
-
     st.plotly_chart(fig, width="stretch")
 
 else:
     st.warning("FX correlation data unavailable.")
-
 
 # =========================================================
 # 4) CRYPTO

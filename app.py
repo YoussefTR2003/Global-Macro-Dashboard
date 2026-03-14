@@ -124,7 +124,35 @@ show_tables = st.sidebar.checkbox("Show detailed tables", value=True)
 # =========================================================
 # DATA FUNCTIONS
 # =========================================================
+@st.cache_data(ttl=1800)
+def get_fx_correlation_matrix(fx_tickers, period="6mo"):
+    data = pd.DataFrame()
 
+    for label, ticker in fx_tickers.items():
+        try:
+            hist = yf.download(
+                ticker,
+                period=period,
+                interval="1d",
+                progress=False,
+                auto_adjust=False
+            )
+
+            if hist.empty:
+                continue
+
+            data[label] = hist["Close"]
+
+        except Exception:
+            continue
+
+    if data.empty or data.shape[1] < 2:
+        return pd.DataFrame()
+
+    returns = data.pct_change().dropna()
+    corr_matrix = returns.corr()
+
+    return corr_matrix
 @st.cache_data(ttl=3600)
 def get_macro_data():
     cpi = fred.get_series("CPIAUCSL").to_frame("CPI")
@@ -426,7 +454,25 @@ with col2:
 
     if show_tables:
         with st.expander("See commodities table"):
-            st.dataframe(com_df, width="stretch")
+            st.dataframe(com_df, width="stretch")\st.header("FX Correlation Heatmap")
+
+fx_corr = get_fx_correlation_matrix(fx_tickers, period="6mo")
+
+if not fx_corr.empty:
+    fig = px.imshow(
+        fx_corr,
+        text_auto=".2f",
+        aspect="auto",
+        color_continuous_scale="RdBu_r",
+        zmin=-1,
+        zmax=1,
+        title="FX Daily Return Correlation"
+    )
+
+    fig.update_layout(margin=dict(l=20, r=20, t=50, b=20))
+    st.plotly_chart(fig, width="stretch")
+else:
+    st.warning("FX correlation data unavailable.")
 
 
 # =========================================================

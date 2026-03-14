@@ -6,6 +6,7 @@ import plotly.express as px
 import requests
 import tradingeconomics as te
 from newsapi import NewsApiClient
+import plotly.express as px
 
 
 # =========================================================

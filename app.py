@@ -402,8 +402,6 @@ with chart_col:
 
 st.header("2) Major Equity Indices")
 
-us_indices_df = get_market_snapshot(us_indices)
-display_market_metrics(us_indices_df, n_cols=4)
 
 selected_region = st.radio(
     "Choose region",

@@ -173,7 +173,7 @@ def get_fx_correlation_matrix(fx_tickers, period="6mo"):
 
 @st.cache_data(ttl=3600)
 def get_macro_data():
-    """Fetch macro indicators from FRED."""
+    """Fetch macro indicators from FRED - Monthly frequency."""
     macro = pd.DataFrame()
     
     series_dict = {
@@ -186,6 +186,11 @@ def get_macro_data():
     for col_name, series_id in series_dict.items():
         try:
             data = fred.get_series(series_id).to_frame(col_name)
+            
+            # Si c'est US 10Y (quotidien), convertir en mensuel
+            if series_id == "DGS10":
+                data = data.resample("MS").mean()
+            
             macro = pd.concat([macro, data], axis=1)
         except Exception as e:
             st.warning(f"⚠️ Failed to fetch {col_name}: {e}")
@@ -195,9 +200,8 @@ def get_macro_data():
         st.error("❌ No macro data available")
         return pd.DataFrame()
     
-    # Resample US 10Y to monthly to match CPI
-    if "US 10Y Yield" in macro.columns:
-        macro["US 10Y Yield"] = macro["US 10Y Yield"].resample("MS").mean()
+    # ✅ CRITIQUE : Supprimer les lignes vides (jours sans données mensuelles)
+    macro = macro.dropna(how='all')
     
     # Calculate inflation metrics
     if "CPI" in macro.columns:

@@ -236,7 +236,7 @@ def get_market_snapshot(tickers_dict):
 
             rows.append({
                 "Name": label,
-                "Last": round(last_close, 2),
+                "Last": round(last_close, 3),
                 "Daily Change %": round(change, 2)
             })
 
